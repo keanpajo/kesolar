@@ -60,7 +60,7 @@ const CONFIG = {
       }
     }
   },
-  ARDUINO_API_URL: 'https://organized-aimed-certain-disposition.trycloudflare.com/api/datos',
+  ARDUINO_API_URL: 'https://disciplines-workflow-neon-groups.trycloudflare.com/api/datos',
   // Años disponibles para los gráficos
   ANOS_DISPONIBLES: [2022, 2023, 2024, 2025],
   // Meses disponibles
@@ -1704,3 +1704,4 @@ function inicializar() {
 
 // Iniciar cuando el DOM esté listo
 document.addEventListener('DOMContentLoaded', inicializar);
+

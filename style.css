@@ -495,3 +495,92 @@ footer.small{font-size:0.8rem;color:#9eddd6;margin-top:8px}
     max-width: none;
   }
 }
+
+.client-location {
+  margin-top: 15px;
+  padding: 12px;
+  background: var(--card2); /* Fondo oscuro consistente con el dashboard */
+  border-radius: 6px;
+  border-left: 3px solid var(--accent);
+  color: #e6f7f7; /* Texto claro para contraste */
+}
+
+/* Corrige el fondo blanco de la sección de geolocalización en el formulario */
+.location-section {
+  margin-top: 15px;
+  padding: 15px;
+  background: var(--card2); /* Fondo oscuro consistente */
+  border-radius: 8px;
+  border: 1px solid var(--accent);
+}
+
+/* Corrige el fondo blanco de la mini-mapa */
+.mini-map-container {
+  background: var(--card2);
+  border-radius: 6px;
+  border: 1px solid var(--accent);
+}
+
+/* Corrige el fondo blanco de la alerta de no ubicación */
+.no-location-message {
+  margin-top: 10px;
+  padding: 10px;
+  background: rgba(255,214,107,0.08); /* tono ámbar translúcido */
+  border-radius: 4px;
+  border-left: 3px solid var(--alert-amber);
+  font-size: 0.9rem;
+  color: #ffd66b;
+}
+
+/* Corrige el fondo blanco de la sección de coordenadas actuales */
+.location-current {
+  margin-top: 10px;
+  padding: 8px;
+  background: rgba(110,240,138,0.08); /* tono verde translúcido */
+  border-radius: 4px;
+  font-size: 0.9rem;
+  color: var(--alert-green);
+}
+
+/* Corrige el fondo blanco de los inputs de geolocalización */
+.location-coords input,
+.location-coords {
+  background: var(--card);
+  color: #e6f7f7;
+  border: 1px solid var(--accent);
+}
+
+/* Corrige el fondo blanco del modal del mapa */
+.map-container {
+  background: var(--card2);
+  border-radius: 8px;
+  border: 1px solid var(--accent);
+}
+
+.cliente-detalle-flex {
+  display: flex;
+  gap: 24px;
+  align-items: flex-start;
+}
+
+.cliente-info-main {
+  flex: 1 1 0;
+  min-width: 220px;
+}
+
+.cliente-info-map {
+  width: 260px;
+  min-width: 200px;
+  max-width: 320px;
+}
+
+@media (max-width: 900px) {
+  .cliente-detalle-flex {
+    flex-direction: column;
+    gap: 10px;
+  }
+  .cliente-info-map {
+    width: 100%;
+    max-width: 100%;
+  }
+}

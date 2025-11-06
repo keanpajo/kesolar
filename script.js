@@ -26,7 +26,9 @@ const CONFIG = {
         rut: '12.345.678-9',
         email: 'maria.gonzalez@email.com',
         telefono: '+56 9 8765 4321',
-        direccion: 'Av. Principal #123, Santiago, Región Metropolitana'
+        direccion: 'Av. Principal #123, Santiago, Región Metropolitana',
+        lat: '-33.4372', // Santiago, Chile
+        lng: '-70.6506'
       }
     },
     'Equipo 2': {
@@ -41,7 +43,9 @@ const CONFIG = {
         rut: '76.543.210-8',
         email: 'contacto@comercialxyz.cl',
         telefono: '+56 2 2345 6789',
-        direccion: 'Calle Comercial #456, Providencia, RM'
+        direccion: 'Calle Comercial #456, Providencia, RM',
+        lat: '-33.4263', // Providencia, Santiago
+        lng: '-70.6091'
       }
     },
     'Equipo 3': {
@@ -56,7 +60,9 @@ const CONFIG = {
         rut: '98.765.432-1',
         email: 'operaciones@industriasabc.cl',
         telefono: '+56 2 3456 7890',
-        direccion: 'Parque Industrial #789, Quilicura, RM'
+        direccion: 'Parque Industrial #789, Quilicura, RM',
+        lat: '-33.3678', // Quilicura, Santiago
+        lng: '-70.7306'
       }
     }
   },
@@ -637,24 +643,154 @@ const UIManager = {
     document.getElementById('equipoForm').reset();
     document.getElementById('numeroCliente').value = Utils.generarNumeroCliente();
     document.getElementById('formModal').style.display = 'flex';
+    // Ocultar mini-mapa si existe
+    if (window._miniMapInstance) {
+      window._miniMapInstance.remove();
+      window._miniMapInstance = null;
+    }
+    const miniMapDiv = document.getElementById('miniMap');
+    if (miniMapDiv) {
+      miniMapDiv.style.display = 'none';
+    }
   },
   ocultarFormularioAgregar() {
     document.getElementById('formModal').style.display = 'none';
+    document.getElementById('nombreEquipo').readOnly = false;
+    // Ocultar mini-mapa si existe
+    if (window._miniMapInstance) {
+      window._miniMapInstance.remove();
+      window._miniMapInstance = null;
+    }
+    const miniMapDiv = document.getElementById('miniMap');
+    if (miniMapDiv) {
+      miniMapDiv.style.display = 'none';
+    }
   },
   mostrarInformacionCliente(equipo) {
     const datosEquipo = state.equipos[equipo];
     const cliente = datosEquipo.cliente;
+    // Asegurarse de que lat y lng no sean cadenas vacías ni null/undefined
+    const tieneUbicacion = cliente.lat && cliente.lng && cliente.lat !== '' && cliente.lng !== '';
     const clienteDetalle = document.getElementById('clienteDetalle');
     clienteDetalle.innerHTML = `
-      <h4 style="color:var(--accent); margin-bottom:8px;">👤 Información del Cliente</h4>
-      <p><strong>Nombre:</strong> ${cliente.nombre}</p>
-      <p><strong>RUT:</strong> ${cliente.rut}</p>
-      <p><strong>N° Cliente:</strong> ${cliente.numero}</p>
-      <p><strong>Email:</strong> ${cliente.email || 'No especificado'}</p>
-      <p><strong>Teléfono:</strong> ${cliente.telefono || 'No especificado'}</p>
-      <p><strong>Dirección:</strong> ${cliente.direccion}</p>
+      <div class="cliente-detalle-flex">
+        <div class="cliente-info-main">
+          <div style="margin-bottom:10px; text-align:left;">
+            <button class="view-map-btn" onclick="UIManager.mostrarFormularioEditarCliente('${equipo.replace(/'/g, "\\'")}')">
+              Editar cliente
+            </button>
+          </div>
+          <h4 style="color:var(--accent); margin-bottom:8px;">👤 Información del Cliente</h4>
+          <p><strong>Nombre:</strong> ${cliente.nombre}</p>
+          <p><strong>RUT:</strong> ${cliente.rut}</p>
+          <p><strong>N° Cliente:</strong> ${cliente.numero}</p>
+          <p><strong>Email:</strong> ${cliente.email || 'No especificado'}</p>
+          <p><strong>Teléfono:</strong> ${cliente.telefono || 'No especificado'}</p>
+          <p><strong>Dirección:</strong> ${cliente.direccion}</p>
+        </div>
+        <div class="cliente-info-map">
+          ${
+            tieneUbicacion
+            ? `<div class="client-location">
+                  <div class="client-map-header">
+                    <strong>📍 Ubicación del Cliente</strong>
+                    <button class="view-map-btn" onclick="mostrarMapaUbicacion(${JSON.stringify(cliente).replace(/"/g, '&quot;')})">
+                      Ver mapa completo
+                    </button>
+                  </div>
+                  <div class="location-coordinates">
+                    <strong>Dirección:</strong> ${cliente.direccion || 'No especificada'}<br>
+                    <strong>Coordenadas:</strong> ${cliente.lat}, ${cliente.lng}
+                  </div>
+                  <div id="miniMap" class="mini-map-container"></div>
+                </div>`
+            : `<div class="no-location-message">
+                  <strong>📍 Ubicación:</strong> No hay datos de ubicación registrados para este cliente.
+                  <div class="small" style="margin-top: 5px;">
+                    Puedes agregar coordenadas editando la información del cliente.
+                  </div>
+                </div>`
+          }
+        </div>
+      </div>
     `;
     clienteDetalle.style.display = 'block';
+
+    // Inicializar mini-mapa si hay coordenadas válidas
+    if (tieneUbicacion && window.L && document.getElementById('miniMap')) {
+      setTimeout(() => {
+        if (document.getElementById('miniMap')) {
+          if (window._miniMapInstance) {
+            window._miniMapInstance.remove();
+          }
+          window._miniMapInstance = L.map('miniMap').setView([parseFloat(cliente.lat), parseFloat(cliente.lng)], 13);
+          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap contributors'
+          }).addTo(window._miniMapInstance);
+          L.marker([parseFloat(cliente.lat), parseFloat(cliente.lng)]).addTo(window._miniMapInstance)
+            .bindPopup(cliente.nombre || 'Ubicación del cliente');
+        }
+      }, 300);
+    }
+  },
+  // --- NUEVO: Formulario para editar cliente ---
+  mostrarFormularioEditarCliente(equipo) {
+    const datosEquipo = state.equipos[equipo];
+    const cliente = datosEquipo.cliente;
+    // Mostrar el modal de formulario y rellenar los campos con los datos actuales
+    document.getElementById('modalFormTitle').textContent = 'Editar Cliente';
+    document.getElementById('formModal').style.display = 'flex';
+    document.getElementById('nombreEquipo').value = equipo;
+    document.getElementById('nombreEquipo').readOnly = true;
+    document.getElementById('consumoBase').value = datosEquipo.consumoBase;
+    document.getElementById('tipoSistema').value = datosEquipo.tipoSistema;
+    document.getElementById('capacidadBateria').value = datosEquipo.capacidadBateria;
+    document.getElementById('numeroCliente').value = cliente.numero;
+    document.getElementById('nombreCliente').value = cliente.nombre;
+    document.getElementById('rutCliente').value = cliente.rut;
+    document.getElementById('emailCliente').value = cliente.email;
+    document.getElementById('telefonoCliente').value = cliente.telefono;
+    document.getElementById('direccionCliente').value = cliente.direccion;
+    document.getElementById('latCliente').value = cliente.lat || '';
+    document.getElementById('lngCliente').value = cliente.lng || '';
+    document.getElementById('creditoInicial').value = datosEquipo.credito;
+    document.getElementById('estadoInicial').value = datosEquipo.activo ? 'activo' : 'inactivo';
+    // Ocultar mini-mapa si existe
+    if (window._miniMapInstance) {
+      window._miniMapInstance.remove();
+      window._miniMapInstance = null;
+    }
+    const miniMapDiv = document.getElementById('miniMap');
+    if (miniMapDiv) {
+      miniMapDiv.style.display = 'none';
+    }
+    // Cambiar el comportamiento del submit temporalmente
+    const form = document.getElementById('equipoForm');
+    form.onsubmit = function(e) {
+      e.preventDefault();
+      // Actualizar los datos del cliente y equipo
+      datosEquipo.consumoBase = parseFloat(document.getElementById('consumoBase').value);
+      datosEquipo.tipoSistema = document.getElementById('tipoSistema').value;
+      datosEquipo.capacidadBateria = parseFloat(document.getElementById('capacidadBateria').value);
+      datosEquipo.credito = parseInt(document.getElementById('creditoInicial').value);
+      datosEquipo.activo = document.getElementById('estadoInicial').value === 'activo';
+      datosEquipo.cliente.numero = document.getElementById('numeroCliente').value;
+      datosEquipo.cliente.nombre = document.getElementById('nombreCliente').value;
+      datosEquipo.cliente.rut = document.getElementById('rutCliente').value;
+      datosEquipo.cliente.email = document.getElementById('emailCliente').value;
+      datosEquipo.cliente.telefono = document.getElementById('telefonoCliente').value;
+      datosEquipo.cliente.direccion = document.getElementById('direccionCliente').value;
+      datosEquipo.cliente.lat = document.getElementById('latCliente').value;
+      datosEquipo.cliente.lng = document.getElementById('lngCliente').value;
+      DataManager.persistirDatos();
+      UIManager.ocultarFormularioAgregar();
+      UIManager.mostrarInformacionCliente(equipo);
+      UIManager.actualizarInfoSuscripcion();
+      UIManager.mostrarSelector();
+      UIManager.actualizarAlertasPanel();
+      // Restaurar el submit original
+      form.onsubmit = (ev) => EquipoManager.procesarFormulario(ev);
+    };
   },
   actualizarResumen() {
     if (!state.equipoSeleccionado) return;
@@ -919,10 +1055,20 @@ const UIManager = {
   // Función para mostrar configuración de suscripción
   mostrarConfiguracionSuscripcion() {
     if (!state.equipoSeleccionado) return;
-    
+
+    // Ocultar mini-mapa si existe
+    const miniMapDiv = document.getElementById('miniMap');
+    if (miniMapDiv) {
+      miniMapDiv.style.display = 'none';
+    }
+    if (window._miniMapInstance) {
+      window._miniMapInstance.remove();
+      window._miniMapInstance = null;
+    }
+
     const equipo = state.equipos[state.equipoSeleccionado];
     document.getElementById('creditoActual').textContent = equipo.credito;
-    
+
     const estadoSuscripcion = document.getElementById('estadoSuscripcion');
     if (equipo.activo) {
       estadoSuscripcion.textContent = 'ACTIVO';
@@ -931,7 +1077,7 @@ const UIManager = {
       estadoSuscripcion.textContent = 'INACTIVO';
       estadoSuscripcion.className = 'badge badge-inactive';
     }
-    
+
     document.getElementById('suscripcionModal').style.display = 'flex';
   },
   
@@ -1186,7 +1332,7 @@ const SimulationManager = {
     // Generar datos complementarios basados en datos reales
     const datosComplementarios = RealDataManager.generarDatosComplementarios(state.lastRealData);
     
-    // Actualizar solo los datos simulados
+    // Actualizar solo los datos simululados
     document.getElementById('autoconsumo').textContent = datosComplementarios.autoconsumo + ' W';
     
     if (datosComplementarios.energiaRed.importada > 0) {
@@ -1438,7 +1584,7 @@ const EquipoManager = {
   },
   procesarFormulario(event) {
     event.preventDefault();
-    
+
     const formData = {
       nombreEquipo: document.getElementById('nombreEquipo').value,
       consumoBase: document.getElementById('consumoBase').value,
@@ -1453,18 +1599,20 @@ const EquipoManager = {
       creditoInicial: document.getElementById('creditoInicial').value,
       estadoInicial: document.getElementById('estadoInicial').value
     };
-    
+
     // Validaciones básicas
     if (!formData.nombreEquipo || !formData.nombreCliente || !formData.rutCliente || !formData.direccionCliente) {
       alert('Por favor complete todos los campos obligatorios (*)');
       return;
     }
-    
-    if (state.equipos[formData.nombreEquipo]) {
+
+    // Permitir edición si el nombre del equipo ya existe y el campo está en modo solo lectura (edición)
+    const nombreEquipoInput = document.getElementById('nombreEquipo');
+    if (state.equipos[formData.nombreEquipo] && !nombreEquipoInput.readOnly) {
       alert('Ya existe un equipo con ese nombre. Por favor elija otro nombre.');
       return;
     }
-    
+
     if (this.agregarEquipo(formData)) {
       UIManager.ocultarFormularioAgregar();
       alert(`✅ Equipo "${formData.nombreEquipo}" agregado correctamente para el cliente ${formData.nombreCliente}.`);
@@ -1508,13 +1656,23 @@ function abrirDashboard(equipo) {
 function volver() {
   // Ocultar dashboard
   document.getElementById('dashboard').style.display = 'none';
-  
+
+  // Ocultar mini-mapa si existe
+  const miniMapDiv = document.getElementById('miniMap');
+  if (miniMapDiv) {
+    miniMapDiv.style.display = 'none';
+  }
+  if (window._miniMapInstance) {
+    window._miniMapInstance.remove();
+    window._miniMapInstance = null;
+  }
+
   // Mostrar elementos de la página principal
   document.getElementById('selector').style.display = 'flex';
   document.getElementById('searchBar').style.display = 'flex';
   document.getElementById('alertasPanel').style.display = 'block';
   document.getElementById('addEquipoBtn').parentElement.style.display = 'block';
-  
+
   SimulationManager.detener();
   RealDataManager.detenerMonitoreo();
   UIManager.mostrarSelector();
@@ -1552,49 +1710,71 @@ function inicializar() {
   document.getElementById('configSuscripcionBtn').addEventListener('click', () => {
     UIManager.mostrarConfiguracionSuscripcion();
   });
-  
+
   document.getElementById('closeSuscripcionModal').addEventListener('click', () => {
     document.getElementById('suscripcionModal').style.display = 'none';
   });
-  
+
   document.getElementById('cerrarSuscripcionBtn').addEventListener('click', () => {
     document.getElementById('suscripcionModal').style.display = 'none';
   });
-  
-  document.getElementById('toggleSuscripcionBtn').addEventListener('click', () => {
+
+  // --- Cambios aquí: controles de días dinámicos ---
+  // Reemplaza los botones +5/-5 por controles dinámicos
+  const agregarDiasInput = document.createElement('input');
+  agregarDiasInput.type = 'number';
+  agregarDiasInput.id = 'agregarDiasInput';
+  agregarDiasInput.min = '1';
+  agregarDiasInput.value = '1';
+  agregarDiasInput.style.width = '60px';
+  agregarDiasInput.style.marginRight = '8px';
+
+  // Insertar el input antes del botón de agregar días
+  const suscripcionControls = document.querySelector('.suscripcion-controls');
+  if (suscripcionControls) {
+    // Elimina los botones antiguos si existen
+    const btnAgregar = document.getElementById('agregarCreditoBtn');
+    const btnQuitar = document.getElementById('quitarCreditoBtn');
+    if (btnAgregar && btnQuitar) {
+      btnAgregar.textContent = '+ días';
+      btnAgregar.id = 'agregarCreditoBtnNuevo';
+      btnQuitar.textContent = '- días';
+      btnQuitar.id = 'quitarCreditoBtnNuevo';
+      suscripcionControls.insertBefore(agregarDiasInput, btnAgregar);
+    }
+  }
+
+  document.getElementById('agregarCreditoBtnNuevo').addEventListener('click', () => {
     if (!state.equipoSeleccionado) return alert('Selecciona un equipo');
-    state.equipos[state.equipoSeleccionado].activo = !state.equipos[state.equipoSeleccionado].activo;
+    const dias = parseInt(document.getElementById('agregarDiasInput').value) || 1;
+    if (dias < 1) return alert('Debes ingresar al menos 1 día.');
+    state.equipos[state.equipoSeleccionado].credito += dias;
     DataManager.persistirDatos();
     UIManager.actualizarInfoSuscripcion();
-    UIManager.mostrarConfiguracionSuscripcion(); // Actualizar modal
+    UIManager.mostrarConfiguracionSuscripcion();
     UIManager.mostrarSelector();
     UIManager.actualizarAlertasPanel();
   });
-  
-  document.getElementById('agregarCreditoBtn').addEventListener('click', () => {
+
+  document.getElementById('quitarCreditoBtnNuevo').addEventListener('click', () => {
     if (!state.equipoSeleccionado) return alert('Selecciona un equipo');
-    state.equipos[state.equipoSeleccionado].credito += 5;
-    DataManager.persistirDatos();
-    UIManager.actualizarInfoSuscripcion();
-    UIManager.mostrarConfiguracionSuscripcion(); // Actualizar modal
-    UIManager.mostrarSelector();
-    UIManager.actualizarAlertasPanel();
-  });
-  
-  document.getElementById('quitarCreditoBtn').addEventListener('click', () => {
-    if (!state.equipoSeleccionado) return alert('Selecciona un equipo');
-    if (state.equipos[state.equipoSeleccionado].credito <= 5) {
+    const dias = parseInt(document.getElementById('agregarDiasInput').value) || 1;
+    if (dias < 1) return alert('Debes ingresar al menos 1 día.');
+    if (state.equipos[state.equipoSeleccionado].credito <= 1) {
       alert('No se pueden quitar más días. El crédito mínimo es 0.');
       return;
     }
-    state.equipos[state.equipoSeleccionado].credito -= 5;
+    state.equipos[state.equipoSeleccionado].credito -= dias;
+    if (state.equipos[state.equipoSeleccionado].credito < 0) {
+      state.equipos[state.equipoSeleccionado].credito = 0;
+    }
     DataManager.persistirDatos();
     UIManager.actualizarInfoSuscripcion();
-    UIManager.mostrarConfiguracionSuscripcion(); // Actualizar modal
+    UIManager.mostrarConfiguracionSuscripcion();
     UIManager.mostrarSelector();
     UIManager.actualizarAlertasPanel();
   });
-  
+
   // Event listeners para gráficos flotantes
   document.querySelectorAll('.dato[data-type]').forEach(card => {
     card.addEventListener('click', (e) => {
@@ -1608,6 +1788,7 @@ function inicializar() {
   });
   
   // Cerrar modal de gráfico flotante
+
   document.getElementById('closeFloatingChartModal').addEventListener('click', () => {
     document.getElementById('floatingChartModal').style.display = 'none';
     if (state.floatingChart) {
@@ -1623,6 +1804,7 @@ function inicializar() {
   });
   
   // Guardar configuración SOC
+
   document.getElementById('guardarSOCCard').addEventListener('click', (e) => {
     e.stopPropagation(); // Evitar que se abra el gráfico flotante
     UIManager.guardarConfiguracionSOC();
@@ -1704,4 +1886,3 @@ function inicializar() {
 
 // Iniciar cuando el DOM esté listo
 document.addEventListener('DOMContentLoaded', inicializar);
-

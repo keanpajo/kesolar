@@ -26,9 +26,9 @@ const CONFIG = {
         rut: '12.345.678-9',
         email: 'maria.gonzalez@email.com',
         telefono: '+56 9 8765 4321',
-        direccion: 'Av. Principal #123, Santiago, Región Metropolitana',
-        lat: '-33.4372', // Santiago, Chile
-        lng: '-70.6506'
+        direccion: 'Av. del Mar 1000, La Serena, Región de Coquimbo',
+        lat: '-29.9075', // La Serena, Coquimbo
+        lng: '-71.2575'
       }
     },
     'Equipo 2': {
@@ -43,9 +43,9 @@ const CONFIG = {
         rut: '76.543.210-8',
         email: 'contacto@comercialxyz.cl',
         telefono: '+56 2 2345 6789',
-        direccion: 'Calle Comercial #456, Providencia, RM',
-        lat: '-33.4263', // Providencia, Santiago
-        lng: '-70.6091'
+        direccion: 'Av. Costanera 2000, Coquimbo, Región de Coquimbo',
+        lat: '-29.9533', // Coquimbo, Coquimbo
+        lng: '-71.3436'
       }
     },
     'Equipo 3': {
@@ -60,9 +60,9 @@ const CONFIG = {
         rut: '98.765.432-1',
         email: 'operaciones@industriasabc.cl',
         telefono: '+56 2 3456 7890',
-        direccion: 'Parque Industrial #789, Quilicura, RM',
-        lat: '-33.3678', // Quilicura, Santiago
-        lng: '-70.7306'
+        direccion: 'Parque Industrial, Ovalle, Región de Coquimbo',
+        lat: '-30.6035', // Ovalle, Coquimbo
+        lng: '-71.1995'
       }
     }
   },
@@ -656,14 +656,17 @@ const UIManager = {
   ocultarFormularioAgregar() {
     document.getElementById('formModal').style.display = 'none';
     document.getElementById('nombreEquipo').readOnly = false;
-    // Ocultar mini-mapa si existe
+    // Si existe un mini-mapa previo, eliminar instancia (el contenedor puede re-renderizarse luego)
     if (window._miniMapInstance) {
       window._miniMapInstance.remove();
       window._miniMapInstance = null;
     }
-    const miniMapDiv = document.getElementById('miniMap');
-    if (miniMapDiv) {
-      miniMapDiv.style.display = 'none';
+    // Re-renderizar la información del cliente y mini-mapa si hay equipo seleccionado con coordenadas
+    if (state.equipoSeleccionado && state.equipos[state.equipoSeleccionado]) {
+      const cliente = state.equipos[state.equipoSeleccionado].cliente;
+      if (cliente && cliente.lat && cliente.lng && cliente.lat !== '' && cliente.lng !== '') {
+        UIManager.mostrarInformacionCliente(state.equipoSeleccionado);
+      }
     }
   },
   mostrarInformacionCliente(equipo) {
@@ -989,19 +992,28 @@ const UIManager = {
     }
     
     // Crear nuevo gráfico
+    // Estilos modernos para gráfico flotante
     state.floatingChart = new Chart(ctx, {
       type: 'line',
       data: {
         labels: labels,
-        datasets: datasets
+        datasets: datasets.map(ds => ({
+          ...ds,
+          tension: 0.35,
+          borderWidth: 2.5,
+          pointRadius: 2,
+          pointHoverRadius: 4,
+          fill: ds.fill ?? true
+        }))
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        plugins: { legend: { position: 'top' } },
         scales: {
-          y: {
-            beginAtZero: true
-          }
+          x: { grid: { color: 'rgba(255,255,255,0.06)' }, ticks: { color: '#9eddd6' } },
+          y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.06)' }, ticks: { color: '#9eddd6' } }
         }
       }
     });
@@ -1056,16 +1068,6 @@ const UIManager = {
   mostrarConfiguracionSuscripcion() {
     if (!state.equipoSeleccionado) return;
 
-    // Ocultar mini-mapa si existe
-    const miniMapDiv = document.getElementById('miniMap');
-    if (miniMapDiv) {
-      miniMapDiv.style.display = 'none';
-    }
-    if (window._miniMapInstance) {
-      window._miniMapInstance.remove();
-      window._miniMapInstance = null;
-    }
-
     const equipo = state.equipos[state.equipoSeleccionado];
     document.getElementById('creditoActual').textContent = equipo.credito;
 
@@ -1108,6 +1110,14 @@ const ChartManager = {
     
     // Gráfico diario (sin cambios)
     const ctxDiario = document.getElementById('historialDiario').getContext('2d');
+    // Gradientes para líneas
+    const gradConsumo = ctxDiario.createLinearGradient(0, 0, 0, 300);
+    gradConsumo.addColorStop(0, 'rgba(91,192,190,0.35)');
+    gradConsumo.addColorStop(1, 'rgba(91,192,190,0.05)');
+    const gradSolar = ctxDiario.createLinearGradient(0, 0, 0, 300);
+    gradSolar.addColorStop(0, 'rgba(255,214,107,0.35)');
+    gradSolar.addColorStop(1, 'rgba(255,214,107,0.05)');
+
     state.charts.diario = new Chart(ctxDiario, {
       type: 'line',
       data: {
@@ -1117,26 +1127,44 @@ const ChartManager = {
             label: 'Consumo (W)',
             data: datos.potencia,
             borderColor: '#5bc0be',
-            backgroundColor: 'rgba(91,192,190,0.12)',
+            backgroundColor: gradConsumo,
             fill: true,
-            tension: 0.3
+            tension: 0.35,
+            borderWidth: 2.5,
+            pointRadius: 2,
+            pointHoverRadius: 4,
+            pointBackgroundColor: '#5bc0be'
           },
           {
             label: 'Producción Solar (W)',
             data: datos.solar,
             borderColor: '#ffd66b',
-            backgroundColor: 'rgba(255,214,107,0.08)',
+            backgroundColor: gradSolar,
             fill: true,
-            tension: 0.3
+            tension: 0.35,
+            borderWidth: 2.5,
+            pointRadius: 2,
+            pointHoverRadius: 4,
+            pointBackgroundColor: '#ffd66b'
           }
         ]
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+          legend: { position: 'top' }
+        },
         scales: {
+          x: {
+            grid: { color: 'rgba(255,255,255,0.06)' },
+            ticks: { color: '#9eddd6' }
+          },
           y: {
-            beginAtZero: true
+            beginAtZero: true,
+            grid: { color: 'rgba(255,255,255,0.06)' },
+            ticks: { color: '#9eddd6' }
           }
         }
       }
@@ -1174,6 +1202,10 @@ const ChartManager = {
       state.charts.mensual.destroy();
     }
     
+    const gradMensual = ctxMensual.createLinearGradient(0, 0, 0, 300);
+    gradMensual.addColorStop(0, 'rgba(153,102,255,0.7)');
+    gradMensual.addColorStop(1, 'rgba(153,102,255,0.15)');
+
     state.charts.mensual = new Chart(ctxMensual, {
       type: 'bar',
       data: {
@@ -1181,21 +1213,24 @@ const ChartManager = {
         datasets: [{
           label: 'Producción diaria (W)',
           data: monthly,
-          backgroundColor: 'rgba(153,102,255,0.6)',
-          borderColor: 'rgba(153,102,255,1)',
-          borderWidth: 1
+          backgroundColor: gradMensual,
+          borderColor: 'rgba(153,102,255,0.9)',
+          borderWidth: 1.5,
+          borderRadius: 6,
+          borderSkipped: false
         }]
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
         scales: {
+          x: { grid: { display: false }, ticks: { color: '#9eddd6' } },
           y: {
             beginAtZero: true,
-            title: {
-              display: true,
-              text: 'Producción (W)'
-            }
+            grid: { color: 'rgba(255,255,255,0.06)' },
+            ticks: { color: '#9eddd6' },
+            title: { display: true, text: 'Producción (W)', color: '#cfeff0' }
           }
         },
         plugins: {
@@ -1203,10 +1238,9 @@ const ChartManager = {
             display: true,
             text: `Producción Mensual - ${CONFIG.MESES_DISPONIBLES[state.mesSeleccionadoMensual].nombre} ${state.anoSeleccionadoMensual}`,
             color: '#bfeceb',
-            font: {
-              size: 14
-            }
-          }
+            font: { size: 14 }
+          },
+          legend: { display: false }
         }
       }
     });
@@ -1233,6 +1267,10 @@ const ChartManager = {
       state.charts.anual.destroy();
     }
     
+    const gradAnual = ctxAnual.createLinearGradient(0, 0, 0, 300);
+    gradAnual.addColorStop(0, 'rgba(255,159,64,0.7)');
+    gradAnual.addColorStop(1, 'rgba(255,159,64,0.15)');
+
     state.charts.anual = new Chart(ctxAnual, {
       type: 'bar',
       data: {
@@ -1240,21 +1278,24 @@ const ChartManager = {
         datasets: [{
           label: 'Producción mensual (W)',
           data: anual,
-          backgroundColor: 'rgba(255,159,64,0.6)',
-          borderColor: 'rgba(255,159,64,1)',
-          borderWidth: 1
+          backgroundColor: gradAnual,
+          borderColor: 'rgba(255,159,64,0.9)',
+          borderWidth: 1.5,
+          borderRadius: 6,
+          borderSkipped: false
         }]
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
         scales: {
+          x: { grid: { display: false }, ticks: { color: '#9eddd6' } },
           y: {
             beginAtZero: true,
-            title: {
-              display: true,
-              text: 'Producción (W)'
-            }
+            grid: { color: 'rgba(255,255,255,0.06)' },
+            ticks: { color: '#9eddd6' },
+            title: { display: true, text: 'Producción (W)', color: '#cfeff0' }
           }
         },
         plugins: {
@@ -1262,10 +1303,9 @@ const ChartManager = {
             display: true,
             text: `Producción Anual - ${state.anoSeleccionadoAnual}`,
             color: '#bfeceb',
-            font: {
-              size: 14
-            }
-          }
+            font: { size: 14 }
+          },
+          legend: { display: false }
         }
       }
     });
@@ -1568,7 +1608,9 @@ const EquipoManager = {
         rut: formData.rutCliente,
         email: formData.emailCliente,
         telefono: formData.telefonoCliente,
-        direccion: formData.direccionCliente
+        direccion: formData.direccionCliente,
+        lat: formData.latCliente || '',
+        lng: formData.lngCliente || ''
       }
     };
     
@@ -1596,6 +1638,8 @@ const EquipoManager = {
       emailCliente: document.getElementById('emailCliente').value,
       telefonoCliente: document.getElementById('telefonoCliente').value,
       direccionCliente: document.getElementById('direccionCliente').value,
+      latCliente: document.getElementById('latCliente').value,
+      lngCliente: document.getElementById('lngCliente').value,
       creditoInicial: document.getElementById('creditoInicial').value,
       estadoInicial: document.getElementById('estadoInicial').value
     };
@@ -1683,6 +1727,16 @@ function volver() {
 // INICIALIZACIÓN
 // ===============================
 function inicializar() {
+  // Configuración global Chart.js (tema dark moderno)
+  if (window.Chart) {
+    Chart.defaults.color = '#bfeceb';
+    Chart.defaults.font.family = 'Segoe UI, Roboto, Inter, sans-serif';
+    Chart.defaults.borderColor = 'rgba(255,255,255,0.08)';
+    Chart.defaults.plugins.legend.labels.color = '#cfeff0';
+    Chart.defaults.plugins.tooltip.backgroundColor = 'rgba(0,0,0,0.85)';
+    Chart.defaults.plugins.tooltip.titleColor = '#e6f7f7';
+    Chart.defaults.plugins.tooltip.bodyColor = '#e6f7f7';
+  }
   // Inicializar datos del día para cada equipo
   Object.keys(state.equipos).forEach(equipo => {
     state.dayData[equipo] = DataManager.generarDiaRealista(equipo);

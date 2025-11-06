@@ -139,11 +139,46 @@
       margin-top: 5px;
     }
     
-    .location-coords input,
-    .location-coords {
-      background: var(--card);
-      color: #e6f7f7;
-      border: 1px solid var(--accent);
+    /* Hacer que las casillas de geolocalización usen el estilo estándar de .form-input */
+    .location-coords .form-input {
+      width: 100%;
+    }
+
+    .location-header { 
+      display: flex; 
+      align-items: baseline; 
+      justify-content: space-between; 
+      gap: 10px; 
+      margin-bottom: 10px; 
+    }
+    .location-header .title { 
+      color: var(--accent); 
+      font-weight: 700; 
+      letter-spacing: 0.2px; 
+    }
+    .location-header .subtitle { 
+      color: #9eddd6; 
+      font-size: 0.85rem; 
+      opacity: 0.9; 
+    }
+
+    .location-actions { 
+      justify-content: flex-start; 
+      align-items: center; 
+    }
+    .location-btn.secondary { 
+      background: transparent; 
+      color: var(--accent); 
+      border: 1px solid var(--accent); 
+    }
+    .location-btn.danger { 
+      background: var(--alert-red); 
+    }
+    .location-coords .form-input { 
+      height: 40px; 
+    }
+    .location-section { 
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.05); 
     }
   </style>
 </head>
@@ -460,6 +495,10 @@
             <div class="form-group" style="grid-column: span 2;">
               <label class="form-label">Geolocalización</label>
               <div class="location-section">
+                <div class="location-header">
+                  <div class="title">📍 Geolocalización</div>
+                  <div class="subtitle">Usa tu ubicación o geocodifica la dirección para completar las coordenadas</div>
+                </div>
                 <div class="location-info">
                   <div class="location-coords">
                     <label class="form-label" for="latCliente">Latitud</label>
@@ -471,9 +510,9 @@
                   </div>
                 </div>
                 <div class="location-actions">
-                  <button type="button" id="geocodificarBtn" class="location-btn">🌍 Obtener Coordenadas</button>
+                  <button type="button" id="geocodificarBtn" class="location-btn secondary">🌍 Obtener Coordenadas</button>
                   <button type="button" id="ubicacionActualBtn" class="location-btn">📍 Usar mi ubicación</button>
-                  <button type="button" id="limpiarCoordsBtn" class="location-btn">🗑️ Limpiar</button>
+                  <button type="button" id="limpiarCoordsBtn" class="location-btn danger">🗑️ Limpiar</button>
                 </div>
                 <div id="geocodingStatus" class="small" style="margin-top: 10px;"></div>
                 <div id="currentLocation" class="location-current" style="display:none;">

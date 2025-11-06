@@ -901,8 +901,8 @@ const UIManager = {
     switch(tipo) {
       case 'potencia':
         datasets = [{
-          label: 'Consumo (W)',
-          data: datos.potencia,
+          label: 'Consumo (kWh)',
+          data: datos.potencia.map(v => v / 1000),
           borderColor: '#5bc0be',
           backgroundColor: 'rgba(91,192,190,0.12)',
           fill: true,
@@ -911,8 +911,8 @@ const UIManager = {
         break;
       case 'solar':
         datasets = [{
-          label: 'Producción Solar (W)',
-          data: datos.solar,
+          label: 'Producción Solar (kWh)',
+          data: datos.solar.map(v => v / 1000),
           borderColor: '#ffd66b',
           backgroundColor: 'rgba(255,214,107,0.08)',
           fill: true,
@@ -932,16 +932,16 @@ const UIManager = {
       case 'energiaRed':
         datasets = [
           {
-            label: 'Energía Importada (W)',
-            data: datos.energiaImport,
+            label: 'Energía Importada (kWh)',
+            data: datos.energiaImport.map(v => v / 1000),
             borderColor: '#ff6b6b',
             backgroundColor: 'rgba(255,107,107,0.08)',
             fill: true,
             tension: 0.3
           },
           {
-            label: 'Energía Inyectada (W)',
-            data: datos.energiaInject,
+            label: 'Energía Inyectada (kWh)',
+            data: datos.energiaInject.map(v => v / 1000),
             borderColor: '#6ef08a',
             backgroundColor: 'rgba(110,240,138,0.08)',
             fill: true,
@@ -951,8 +951,8 @@ const UIManager = {
         break;
       case 'autoconsumo':
         datasets = [{
-          label: 'Autoconsumo (W)',
-          data: datos.autoconsumo,
+          label: 'Autoconsumo (kWh)',
+          data: datos.autoconsumo.map(v => v / 1000),
           borderColor: '#9d4edd',
           backgroundColor: 'rgba(157,78,221,0.08)',
           fill: true,
@@ -1124,8 +1124,8 @@ const ChartManager = {
         labels: Array.from({ length: 24 }, (_, i) => i + 'h'),
         datasets: [
           {
-            label: 'Consumo (W)',
-            data: datos.potencia,
+            label: 'Consumo (kWh)',
+            data: datos.potencia.map(v => v / 1000),
             borderColor: '#5bc0be',
             backgroundColor: gradConsumo,
             fill: true,
@@ -1136,8 +1136,8 @@ const ChartManager = {
             pointBackgroundColor: '#5bc0be'
           },
           {
-            label: 'Producción Solar (W)',
-            data: datos.solar,
+            label: 'Producción Solar (kWh)',
+            data: datos.solar.map(v => v / 1000),
             borderColor: '#ffd66b',
             backgroundColor: gradSolar,
             fill: true,
@@ -1211,8 +1211,8 @@ const ChartManager = {
       data: {
         labels: Array.from({ length: 30 }, (_, i) => 'D' + (i + 1)),
         datasets: [{
-          label: 'Producción diaria (W)',
-          data: monthly,
+          label: 'Producción diaria (kWh)',
+          data: monthly.map(v => v / 1000),
           backgroundColor: gradMensual,
           borderColor: 'rgba(153,102,255,0.9)',
           borderWidth: 1.5,
@@ -1230,12 +1230,12 @@ const ChartManager = {
             beginAtZero: true,
             grid: { color: 'rgba(255,255,255,0.06)' },
             ticks: { color: '#9eddd6' },
-            title: { display: true, text: 'Producción (W)', color: '#cfeff0' }
+            title: { display: true, text: 'Producción (kWh)', color: '#cfeff0' }
           }
         },
         plugins: {
           title: {
-            display: true,
+            display: false,
             text: `Producción Mensual - ${CONFIG.MESES_DISPONIBLES[state.mesSeleccionadoMensual].nombre} ${state.anoSeleccionadoMensual}`,
             color: '#bfeceb',
             font: { size: 14 }
@@ -1276,8 +1276,8 @@ const ChartManager = {
       data: {
         labels: CONFIG.MESES_DISPONIBLES.map(mes => mes.nombre.substring(0, 3)),
         datasets: [{
-          label: 'Producción mensual (W)',
-          data: anual,
+          label: 'Producción mensual (kWh)',
+          data: anual.map(v => v / 1000),
           backgroundColor: gradAnual,
           borderColor: 'rgba(255,159,64,0.9)',
           borderWidth: 1.5,
@@ -1295,12 +1295,12 @@ const ChartManager = {
             beginAtZero: true,
             grid: { color: 'rgba(255,255,255,0.06)' },
             ticks: { color: '#9eddd6' },
-            title: { display: true, text: 'Producción (W)', color: '#cfeff0' }
+            title: { display: true, text: 'Producción (KWh)', color: '#cfeff0' }
           }
         },
         plugins: {
           title: {
-            display: true,
+            display: false,
             text: `Producción Anual - ${state.anoSeleccionadoAnual}`,
             color: '#bfeceb',
             font: { size: 14 }

@@ -101,6 +101,8 @@ let state = {
   searchTerm: '',
   alertasExpandidas: false,
   floatingChart: null,
+  gridStatsTimer: null,
+  batteryCellsTimer: null,
   // Año y mes seleccionados para los gráficos
   anoSeleccionadoMensual: new Date().getFullYear(),
   mesSeleccionadoMensual: new Date().getMonth(),
@@ -108,6 +110,7 @@ let state = {
   // Datos históricos para años y meses
   datosMensuales: {}, // Estructura: { [equipo]: { [año]: { [mes]: datos } } }
   datosAnuales: {},    // Estructura: { [equipo]: { [año]: datos } }
+  datosAnualesConsumo: {}, // Estructura: { [equipo]: { [año]: datos } }
   // Estado de conexión
   conexionAlertShown: false,
   conexionErrorCount: 0
@@ -330,6 +333,7 @@ const Utils = {
     selectAnoAnual.addEventListener('change', (e) => {
       state.anoSeleccionadoAnual = parseInt(e.target.value);
       ChartManager.actualizarGraficoAnual();
+      ChartManager.actualizarGraficoAnualConsumo();
     });
   },
   
@@ -387,7 +391,8 @@ const RealDataManager = {
     if (state.equipoSeleccionado !== "Equipo 1") {
       this.ocultarTodosLosBadges();
       state.realDataAvailable = false;
-      Utils.ocultarAlertaConexion();
+      const est = document.getElementById('estadoConexion');
+      if (est) { est.textContent = '--'; est.className = 'valor'; }
       return null;
     }
     try {
@@ -397,11 +402,12 @@ const RealDataManager = {
       state.lastRealData = data;
       state.realDataAvailable = true;
       
-      // Reiniciar contador de errores y mostrar éxito si había error antes
+      // Reiniciar contador de errores y actualizar estado conexión en tarjeta
       if (state.conexionErrorCount > 0) {
         state.conexionErrorCount = 0;
-        Utils.mostrarAlertaConexion('success', 'Conexión con Arduino restaurada correctamente');
       }
+      const est = document.getElementById('estadoConexion');
+      if (est) { est.textContent = 'En línea'; est.className = 'valor verde'; }
       
       this.actualizarUIconDatosReales(data);
       return data;
@@ -413,16 +419,9 @@ const RealDataManager = {
       // Incrementar contador de errores
       state.conexionErrorCount++;
       
-      // Mostrar alerta después de 3 intentos fallidos
-      if (state.conexionErrorCount >= 3 && !state.conexionAlertShown) {
-        let mensaje = 'No se pueden obtener datos del servidor Arduino. ';
-        if (error.message.includes('Failed to fetch')) {
-          mensaje += 'Verifique que el servidor esté ejecutándose y accesible en la red.';
-        } else {
-          mensaje += 'Error: ' + error.message;
-        }
-        Utils.mostrarAlertaConexion('error', mensaje);
-      }
+      // Actualizar tarjeta de conexión como fuera de línea
+      const est = document.getElementById('estadoConexion');
+      if (est) { est.textContent = 'Fuera de línea'; est.className = 'valor rojo'; }
       
       return null;
     }
@@ -473,6 +472,8 @@ const RealDataManager = {
     if (state.equipoSeleccionado === "Equipo 1") {
       // Reiniciar contador de errores
       state.conexionErrorCount = 0;
+      const est = document.getElementById('estadoConexion');
+      if (est) { est.textContent = 'Conectando...'; est.className = 'valor amarillo'; }
       
       // Obtener datos inmediatamente
       this.obtenerDatosReales();
@@ -482,7 +483,8 @@ const RealDataManager = {
       }, 3000); // Actualizar cada 3 segundos
     } else {
       this.ocultarTodosLosBadges();
-      Utils.ocultarAlertaConexion();
+      const est = document.getElementById('estadoConexion');
+      if (est) { est.textContent = '--'; est.className = 'valor'; }
     }
   },
   detenerMonitoreo() {
@@ -491,7 +493,8 @@ const RealDataManager = {
       state.realDataTimer = null;
     }
     this.ocultarTodosLosBadges();
-    Utils.ocultarAlertaConexion();
+    const est = document.getElementById('estadoConexion');
+    if (est) { est.textContent = '--'; est.className = 'valor'; }
   },
   // Generar datos simulados complementarios basados en datos reales
   generarDatosComplementarios(dataReal) {
@@ -672,7 +675,6 @@ const UIManager = {
   mostrarInformacionCliente(equipo) {
     const datosEquipo = state.equipos[equipo];
     const cliente = datosEquipo.cliente;
-    // Asegurarse de que lat y lng no sean cadenas vacías ni null/undefined
     const tieneUbicacion = cliente.lat && cliente.lng && cliente.lat !== '' && cliente.lng !== '';
     const clienteDetalle = document.getElementById('clienteDetalle');
     clienteDetalle.innerHTML = `
@@ -695,23 +697,38 @@ const UIManager = {
           ${
             tieneUbicacion
             ? `<div class="client-location">
-                  <div class="client-map-header">
+                  <div class="client-map-header" style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
                     <strong>📍 Ubicación del Cliente</strong>
-                    <button class="view-map-btn" onclick="mostrarMapaUbicacion(${JSON.stringify(cliente).replace(/"/g, '&quot;')})">
-                      Ver mapa completo
-                    </button>
+                    <button class="view-map-btn" onclick="mostrarMapaUbicacion(${JSON.stringify(cliente).replace(/"/g, '&quot;')})">Ver mapa completo</button>
                   </div>
                   <div class="location-coordinates">
                     <strong>Dirección:</strong> ${cliente.direccion || 'No especificada'}<br>
                     <strong>Coordenadas:</strong> ${cliente.lat}, ${cliente.lng}
                   </div>
-                  <div id="miniMap" class="mini-map-container"></div>
+                  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;align-items:stretch;margin-top:8px;">
+                    <div id="miniMap" class="mini-map-container" style="min-height:180px;border-radius:10px;overflow:hidden;"></div>
+                    <div id="weatherCard" style="background:linear-gradient(180deg,var(--card2),var(--card));border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:12px;box-shadow:0 8px 26px rgba(0,0,0,0.45);min-height:180px;display:flex;flex-direction:column;justify-content:space-between;">
+                      <div style="display:flex;justify-content:space-between;align-items:center;">
+                        <div style="font-weight:700;color:var(--accent);">🌤️ Clima</div>
+                        <div id="weatherUpdated" style="font-size:0.75rem;color:#9eddd6;"></div>
+                      </div>
+                      <div id="weatherMain" style="display:flex;align-items:center;gap:10px;">
+                        <div id="weatherIcon" style="font-size:2rem;">--</div>
+                        <div>
+                          <div id="weatherTemp" style="font-size:1.6rem;font-weight:800;">-- °C</div>
+                          <div id="weatherDesc" style="color:#9eddd6;font-size:0.9rem;">Cargando...</div>
+                        </div>
+                      </div>
+                      <div id="weatherExtra" style="display:flex;gap:12px;color:#bfeceb;font-size:0.9rem;">
+                        <div>Viento: <span id="weatherWind">-- km/h</span></div>
+                        <div>Humedad: <span id="weatherHum">-- %</span></div>
+                      </div>
+                    </div>
+                  </div>
                 </div>`
             : `<div class="no-location-message">
                   <strong>📍 Ubicación:</strong> No hay datos de ubicación registrados para este cliente.
-                  <div class="small" style="margin-top: 5px;">
-                    Puedes agregar coordenadas editando la información del cliente.
-                  </div>
+                  <div class="small" style="margin-top: 5px;">Puedes agregar coordenadas editando la información del cliente.</div>
                 </div>`
           }
         </div>
@@ -727,13 +744,13 @@ const UIManager = {
             window._miniMapInstance.remove();
           }
           window._miniMapInstance = L.map('miniMap').setView([parseFloat(cliente.lat), parseFloat(cliente.lng)], 13);
-          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; OpenStreetMap contributors'
-          }).addTo(window._miniMapInstance);
-          L.marker([parseFloat(cliente.lat), parseFloat(cliente.lng)]).addTo(window._miniMapInstance)
-            .bindPopup(cliente.nombre || 'Ubicación del cliente');
+          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap contributors' }).addTo(window._miniMapInstance);
+          L.marker([parseFloat(cliente.lat), parseFloat(cliente.lng)]).addTo(window._miniMapInstance).bindPopup(cliente.nombre || 'Ubicación del cliente');
         }
       }, 300);
+
+      // Cargar clima en tiempo real asociado a coordenadas
+      WeatherManager.actualizarClima(parseFloat(cliente.lat), parseFloat(cliente.lng));
     }
   },
   // --- NUEVO: Formulario para editar cliente ---
@@ -1019,8 +1036,102 @@ const UIManager = {
     });
     
     // Configurar título y mostrar modal
+    // Limpiar panel previo si existe
+    const prevStats = document.getElementById('gridStats');
+    if (prevStats) prevStats.remove();
+    const prevCells = document.getElementById('batteryCellsPanel');
+    if (prevCells) prevCells.remove();
     document.getElementById('floatingChartTitle').textContent = titulo;
     document.getElementById('floatingChartModal').style.display = 'flex';
+
+    // Si es Energía de Red, agregar panel con valores simulados (arriba del gráfico)
+    if (tipo === 'energiaRed') {
+      const statsHtml = `
+        <div id="gridStats" style="margin-bottom:12px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:12px;display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;">
+          <div style="text-align:center;"><div style="font-size:0.75rem;color:#9eddd6;">Estado</div><div id="gridEstado" style="font-size:1.1rem;font-weight:700;"></div></div>
+          <div style="text-align:center;"><div style="font-size:0.75rem;color:#9eddd6;">Voltaje</div><div id="gridVolt" style="font-size:1.1rem;font-weight:700;"></div></div>
+          <div style="text-align:center;"><div style="font-size:0.75rem;color:#9eddd6;">Frecuencia</div><div id="gridFreq" style="font-size:1.1rem;font-weight:700;"></div></div>
+          <div style="text-align:center;"><div style="font-size:0.75rem;color:#9eddd6;">Corriente</div><div id="gridAmps" style="font-size:1.1rem;font-weight:700;"></div></div>
+        </div>`;
+
+      const chartContainer = document.getElementById('floatingChart').parentElement;
+      chartContainer.insertAdjacentHTML('beforebegin', statsHtml);
+
+      // Refrescar inmediatamente y programar actualización periódica
+      UIManager.actualizarGridStats();
+      if (state.gridStatsTimer) { clearInterval(state.gridStatsTimer); state.gridStatsTimer = null; }
+      state.gridStatsTimer = setInterval(() => UIManager.actualizarGridStats(), CONFIG.TICK_MS);
+    }
+
+    // Si es Voltaje de Batería, agregar panel con celdas LiFePO4
+    if (tipo === 'voltBatPack') {
+      const cellsHtml = `
+        <div id="batteryCellsPanel" style="margin-bottom:12px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:12px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
+            <div style="font-size:0.9rem;color:#9eddd6;">Química: LiFePO4 • Configuración: <strong>16S</strong></div>
+            <div id="cellsImbalance" style="font-weight:700;"></div>
+          </div>
+          <div id="cellsGrid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:8px;margin-top:10px;"></div>
+        </div>`;
+      const chartContainer = document.getElementById('floatingChart').parentElement;
+      chartContainer.insertAdjacentHTML('beforebegin', cellsHtml);
+      UIManager.actualizarBatteryCellsPanel();
+      if (state.batteryCellsTimer) { clearInterval(state.batteryCellsTimer); state.batteryCellsTimer = null; }
+      state.batteryCellsTimer = setInterval(() => UIManager.actualizarBatteryCellsPanel(), CONFIG.TICK_MS);
+    }
+  },
+  
+  // Actualizar valores del panel de red en modal (si existe)
+  actualizarGridStats() {
+    const el = document.getElementById('gridStats');
+    if (!el || !state.equipoSeleccionado) return;
+    const h = state.simulatedHour;
+    const d = state.dayData[state.equipoSeleccionado];
+    const pImport = (d?.energiaImport?.[h] ?? 0);
+    const pInject = (d?.energiaInject?.[h] ?? 0);
+    const pNet = pImport - pInject;
+    const volt = Math.round( (220 + Utils.randBetween(-5, 5)) * 10 ) / 10;
+    const freq = Math.round( (50 + Utils.randBetween(-0.2, 0.2)) * 10 ) / 10;
+    const amps = Math.round( (Math.abs(pNet) / Math.max(volt, 1)) * 100 ) / 100;
+    const estado = pNet >= 0 ? 'Importando' : 'Inyectando';
+
+    const estadoEl = document.getElementById('gridEstado');
+    const voltEl = document.getElementById('gridVolt');
+    const freqEl = document.getElementById('gridFreq');
+    const ampsEl = document.getElementById('gridAmps');
+    if (estadoEl) { estadoEl.textContent = estado; estadoEl.style.color = pNet>=0 ? '#ffd66b' : '#6ef08a'; }
+    if (voltEl) voltEl.textContent = `${volt} V`;
+    if (freqEl) freqEl.textContent = `${freq} Hz`;
+    if (ampsEl) ampsEl.textContent = `${amps} A`;
+  },
+
+  // Actualizar panel de celdas LiFePO4 en el modal (si existe)
+  actualizarBatteryCellsPanel() {
+    const panel = document.getElementById('batteryCellsPanel');
+    const grid = document.getElementById('cellsGrid');
+    const imb = document.getElementById('cellsImbalance');
+    if (!panel || !grid || !state.equipoSeleccionado) return;
+    const d = state.dayData[state.equipoSeleccionado];
+    const h = state.simulatedHour;
+    const cells = Array.from({length:16}, (_,i)=> d.voltCells[i][h]);
+    const minV = Math.min(...cells);
+    const maxV = Math.max(...cells);
+    const delta = (maxV - minV);
+    const deltaMv = Math.round(delta * 1000);
+    const color = delta > 0.12 ? '#ff6b6b' : delta > 0.05 ? '#ffd66b' : '#6ef08a';
+    if (imb) {
+      imb.textContent = `Desbalance: ${deltaMv} mV (max-min)`;
+      imb.style.color = color;
+    }
+    grid.innerHTML = cells.map((v, idx) => {
+      const inCrit = (v < 3.0 || v > 3.65);
+      const inWarn = (v < 3.1 || v > 3.6);
+      const vColor = inCrit ? '#ff6b6b' : inWarn ? '#ffd66b' : '#9eddd6';
+      return `<div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:8px;text-align:center;">
+        <div style=\"font-size:0.75rem;color:#9eddd6;\">Celda ${idx+1}</div>
+        <div style=\"font-weight:700;color:${vColor}\">${v.toFixed(3)} V</div>
+      </div>`;
+    }).join('');
   },
   
   // Función para alternar configuración de batería
@@ -1173,6 +1284,7 @@ const ChartManager = {
     // Generar gráficos mensual y anual
     this.generarGraficoMensual();
     this.generarGraficoAnual();
+    this.generarGraficoAnualConsumo();
     
     // Inicializar selectores
     Utils.inicializarSelectoresGraficos();
@@ -1249,7 +1361,7 @@ const ChartManager = {
   generarGraficoAnual() {
     if (!state.equipoSeleccionado) return;
     
-    // Obtener o generar datos anuales
+    // Obtener o generar datos anuales (producción)
     if (!state.datosAnuales[state.equipoSeleccionado]) {
       state.datosAnuales[state.equipoSeleccionado] = {};
     }
@@ -1310,6 +1422,70 @@ const ChartManager = {
       }
     });
   },
+
+  generarGraficoAnualConsumo() {
+    if (!state.equipoSeleccionado) return;
+
+    // Obtener o generar datos anuales (consumo)
+    if (!state.datosAnualesConsumo[state.equipoSeleccionado]) {
+      state.datosAnualesConsumo[state.equipoSeleccionado] = {};
+    }
+    if (!state.datosAnualesConsumo[state.equipoSeleccionado][state.anoSeleccionadoAnual]) {
+      state.datosAnualesConsumo[state.equipoSeleccionado][state.anoSeleccionadoAnual] = 
+        Utils.generarDatosAnuales(state.equipoSeleccionado, state.anoSeleccionadoAnual);
+    }
+
+    const anualConsumo = state.datosAnualesConsumo[state.equipoSeleccionado][state.anoSeleccionadoAnual];
+
+    const elCanvas = document.getElementById('historialAnualConsumo');
+    if (!elCanvas) return;
+    const ctxCons = elCanvas.getContext('2d');
+
+    if (state.charts.anualConsumo) {
+      state.charts.anualConsumo.destroy();
+    }
+
+    const gradCons = ctxCons.createLinearGradient(0, 0, 0, 300);
+    gradCons.addColorStop(0, 'rgba(91,192,190,0.7)');
+    gradCons.addColorStop(1, 'rgba(91,192,190,0.15)');
+
+    state.charts.anualConsumo = new Chart(ctxCons, {
+      type: 'bar',
+      data: {
+        labels: CONFIG.MESES_DISPONIBLES.map(mes => mes.nombre.substring(0, 3)),
+        datasets: [{
+          label: 'Consumo mensual (kWh)',
+          data: anualConsumo.map(v => v / 1000),
+          backgroundColor: gradCons,
+          borderColor: 'rgba(91,192,190,0.9)',
+          borderWidth: 1.5,
+          borderRadius: 6,
+          borderSkipped: false,
+          categoryPercentage: 0.6,
+          barPercentage: 0.8,
+          maxBarThickness: 40
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        scales: {
+          x: { grid: { display: false }, ticks: { color: '#9eddd6' } },
+          y: {
+            beginAtZero: true,
+            grid: { color: 'rgba(255,255,255,0.06)' },
+            ticks: { color: '#9eddd6' },
+            title: { display: true, text: 'Consumo (kWh)', color: '#cfeff0' }
+          }
+        },
+        plugins: {
+          title: { display: false },
+          legend: { display: false }
+        }
+      }
+    });
+  },
   
   // Función para actualizar solo el gráfico mensual
   actualizarGraficoMensual() {
@@ -1319,6 +1495,10 @@ const ChartManager = {
   // Función para actualizar solo el gráfico anual
   actualizarGraficoAnual() {
     this.generarGraficoAnual();
+  },
+
+  actualizarGraficoAnualConsumo() {
+    this.generarGraficoAnualConsumo();
   }
 };
 
@@ -1382,6 +1562,12 @@ const SimulationManager = {
     } else {
       document.getElementById('energiaRed').textContent = '0 W';
     }
+
+    // Cálculos coherentes para generación distribuida (aprox con datos disponibles)
+    const consumoDisplayReal = (datosComplementarios.autoconsumo || 0) + (datosComplementarios.energiaRed.importada || 0);
+    const produccionSolarDisplayReal = (datosComplementarios.autoconsumo || 0) + (datosComplementarios.energiaRed.inyectada || 0);
+    document.getElementById('potencia').textContent = consumoDisplayReal + ' W';
+    document.getElementById('produccionSolar').textContent = produccionSolarDisplayReal + ' W';
     
     document.getElementById('temperaturaInv').textContent = datosComplementarios.temperaturaInv + ' °C';
     document.getElementById('temperaturaInv').className = 'valor ' + Utils.getColorByValue(datosComplementarios.temperaturaInv, 38, 45);
@@ -1416,9 +1602,11 @@ const SimulationManager = {
     
     pct = Math.max(dod, Math.min(socMax, Utils.round(pct + batteryAction / 5000, 1)));
     
-    // Actualizar UI
-    document.getElementById('potencia').textContent = potencia + ' W';
-    document.getElementById('produccionSolar').textContent = solar + ' W';
+    // Actualizar UI con definiciones coherentes
+    const consumoDisplay = autocons + importGrid + (batteryAction < 0 ? Math.round(-batteryAction) : 0);
+    const produccionSolarDisplay = autocons + injectGrid + (batteryAction > 0 ? Math.round(batteryAction) : 0);
+    document.getElementById('potencia').textContent = consumoDisplay + ' W';
+    document.getElementById('produccionSolar').textContent = produccionSolarDisplay + ' W';
     document.getElementById('voltPanels').textContent = voltP + ' V';
     document.getElementById('autoconsumo').textContent = autocons + ' W';
     
@@ -1494,11 +1682,17 @@ const AlertManager = {
     const h = state.simulatedHour;
     
     let cellCritical = false, cellWarn = false;
+    let minCell = Number.POSITIVE_INFINITY, maxCell = Number.NEGATIVE_INFINITY;
     for (let c = 0; c < 16; c++) {
       const v = d.voltCells[c][h];
       if (v < 3.0 || v > 3.65) cellCritical = true;
       if (v < 3.1 || v > 3.6) cellWarn = true;
+      if (v < minCell) minCell = v;
+      if (v > maxCell) maxCell = v;
     }
+    const delta = maxCell - minCell;
+    if (delta > 0.12) cellCritical = true; // >120 mV
+    else if (delta > 0.05) cellWarn = true; // >50 mV
     
     const temp = d.tempInv[h];
     const tempCritical = temp > 55;
@@ -1588,6 +1782,61 @@ const AlertManager = {
     
     document.getElementById('alertOverallDot').className = 'dot ' + (alertas.level === 'CRIT' ? 'red' : alertas.level === 'WARN' ? 'amber' : 'green');
     document.getElementById('alertOverallText').textContent = alertas.overall;
+  }
+};
+
+// ===============================
+// CLIMA EN TIEMPO REAL (Open-Meteo)
+// ===============================
+const WeatherManager = {
+  async actualizarClima(lat, lng) {
+    const card = document.getElementById('weatherCard');
+    if (!card) return;
+    try {
+      // Open-Meteo: sin API key
+      const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m`;
+      const resp = await fetch(url);
+      if (!resp.ok) throw new Error('HTTP');
+      const data = await resp.json();
+      const c = data.current || {};
+      const temp = typeof c.temperature_2m === 'number' ? Math.round(c.temperature_2m) : null;
+      const hum = typeof c.relative_humidity_2m === 'number' ? Math.round(c.relative_humidity_2m) : null;
+      const wind = typeof c.wind_speed_10m === 'number' ? Math.round(c.wind_speed_10m) : null;
+      const code = c.weather_code;
+
+      // Mapear código a icono y descripción
+      const { icon, desc } = this.descripcionClima(code);
+
+      const elTemp = document.getElementById('weatherTemp');
+      const elDesc = document.getElementById('weatherDesc');
+      const elIcon = document.getElementById('weatherIcon');
+      const elWind = document.getElementById('weatherWind');
+      const elHum = document.getElementById('weatherHum');
+      const elUpd = document.getElementById('weatherUpdated');
+
+      if (elTemp) elTemp.textContent = temp !== null ? `${temp} °C` : '-- °C';
+      if (elDesc) elDesc.textContent = desc;
+      if (elIcon) elIcon.textContent = icon;
+      if (elWind) elWind.textContent = wind !== null ? `${wind} km/h` : '-- km/h';
+      if (elHum) elHum.textContent = hum !== null ? `${hum} %` : '-- %';
+      if (elUpd) elUpd.textContent = new Date().toLocaleTimeString();
+    } catch (e) {
+      const elDesc = document.getElementById('weatherDesc');
+      if (elDesc) elDesc.textContent = 'No disponible';
+    }
+  },
+  descripcionClima(code) {
+    const map = {
+      0: ['☀️', 'Despejado'], 1: ['🌤️', 'Mayormente despejado'], 2: ['⛅', 'Parcialmente nublado'], 3: ['☁️', 'Nublado'],
+      45: ['🌫️', 'Niebla'], 48: ['🌫️', 'Niebla escarchada'],
+      51: ['🌦️', 'Llovizna ligera'], 53: ['🌦️', 'Llovizna'], 55: ['🌧️', 'Llovizna intensa'],
+      61: ['🌦️', 'Lluvia ligera'], 63: ['🌧️', 'Lluvia'], 65: ['🌧️', 'Lluvia intensa'],
+      71: ['🌨️', 'Nieve ligera'], 73: ['🌨️', 'Nieve'], 75: ['❄️', 'Nieve intensa'],
+      80: ['🌦️', 'Chubascos ligeros'], 81: ['🌧️', 'Chubascos'], 82: ['🌧️', 'Chubascos fuertes'],
+      95: ['⛈️', 'Tormenta'], 96: ['⛈️', 'Tormenta con granizo'], 99: ['⛈️', 'Tormenta fuerte']
+    };
+    const [icon, desc] = map[code] || ['❓', 'Clima'];
+    return { icon, desc };
   }
 };
 
@@ -1845,6 +2094,12 @@ function inicializar() {
 
   document.getElementById('closeFloatingChartModal').addEventListener('click', () => {
     document.getElementById('floatingChartModal').style.display = 'none';
+    const gridStats = document.getElementById('gridStats');
+    if (gridStats) gridStats.remove();
+    const cellsPanel = document.getElementById('batteryCellsPanel');
+    if (cellsPanel) cellsPanel.remove();
+    if (state.gridStatsTimer) { clearInterval(state.gridStatsTimer); state.gridStatsTimer = null; }
+    if (state.batteryCellsTimer) { clearInterval(state.batteryCellsTimer); state.batteryCellsTimer = null; }
     if (state.floatingChart) {
       state.floatingChart.destroy();
       state.floatingChart = null;
@@ -1874,36 +2129,83 @@ function inicializar() {
     const injected = d.energiaInject.reduce((a,b)=>a+b,0)/1000;
     const autocons = d.autoconsumo.reduce((a,b)=>a+b,0)/1000;
     
+    // Cálculos con definiciones de generación distribuida
+    const descargaBatWh = d.potencia.map((cons, i) => {
+      const auto = d.autoconsumo[i] || 0;
+      const imp = d.energiaImport[i] || 0;
+      return Math.max(0, cons - auto - imp);
+    }).reduce((a,b)=>a+b,0) / 1000;
+
+    const cargaBatWh = d.solar.map((sol, i) => {
+      const auto = d.autoconsumo[i] || 0;
+      const inj = d.energiaInject[i] || 0;
+      return Math.max(0, sol - auto - inj);
+    }).reduce((a,b)=>a+b,0) / 1000;
+
+    const autocons_kwh = autocons; // ya en kWh
+
     const html = `
       <div style="text-align:center; margin-bottom:20px;">
         <h3 style="color:var(--accent);">Resumen Energético del Día</h3>
         <p>Para el equipo: <strong>${state.equipoSeleccionado}</strong></p>
       </div>
-      <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:15px; margin:20px 0;">
-        <div style="background:rgba(255,255,255,0.05); padding:15px; border-radius:10px; text-align:center;">
-          <h4 style="color:#5bc0be; margin:0 0 10px 0;">Consumo Total</h4>
-          <div style="font-size:1.8rem; font-weight:bold;">${Utils.round(consumed, 2)} kWh</div>
+
+      <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:15px; margin:20px 0;">
+        <div style="background:rgba(255,255,255,0.05); padding:15px; border-radius:10px;">
+          <div style="color:#9eddd6; font-size:0.9rem;">Consumo total del día</div>
+          <div style="font-size:1.6rem; font-weight:800; color:#5bc0be;">${Utils.round(consumed, 2)} kWh</div>
+          <small>Demanda total de la instalación</small>
         </div>
-        <div style="background:rgba(255,255,255,0.05); padding:15px; border-radius:10px; text-align:center;">
-          <h4 style="color:#ffd66b; margin:0 0 10px 0;">Generación Solar</h4>
-          <div style="font-size:1.8rem; font-weight:bold;">${Utils.round(solar, 2)} kWh</div>
+        <div style="background:rgba(255,255,255,0.05); padding:15px; border-radius:10px;">
+          <div style="color:#9eddd6; font-size:0.9rem;">Generación solar del día</div>
+          <div style="font-size:1.6rem; font-weight:800; color:#ffd66b;">${Utils.round(solar, 2)} kWh</div>
+          <small>Producción FV total</small>
         </div>
-        <div style="background:rgba(255,255,255,0.05); padding:15px; border-radius:10px; text-align:center;">
-          <h4 style="color:#ff6b6b; margin:0 0 10px 0;">Importada de Red</h4>
-          <div style="font-size:1.8rem; font-weight:bold;">${Utils.round(imported, 2)} kWh</div>
+        <div style="background:rgba(255,255,255,0.05); padding:15px; border-radius:10px;">
+          <div style="color:#9eddd6; font-size:0.9rem;">Autoconsumo</div>
+          <div style="font-size:1.6rem; font-weight:800; color:#9d4edd;">${Utils.round(autocons_kwh, 2)} kWh</div>
+          <small>Generación solar usada directamente</small>
         </div>
-        <div style="background:rgba(255,255,255,0.05); padding:15px; border-radius:10px; text-align:center;">
-          <h4 style="color:#6ef08a; margin:0 0 10px 0;">Inyectada a Red</h4>
-          <div style="font-size:1.8rem; font-weight:bold;">${Utils.round(injected, 2)} kWh</div>
+        <div style="background:rgba(255,255,255,0.05); padding:15px; border-radius:10px;">
+          <div style="color:#9eddd6; font-size:0.9rem;">Energía importada</div>
+          <div style="font-size:1.6rem; font-weight:800; color:#ff6b6b;">${Utils.round(imported, 2)} kWh</div>
+          <small>Desde la red</small>
+        </div>
+        <div style="background:rgba(255,255,255,0.05); padding:15px; border-radius:10px;">
+          <div style="color:#9eddd6; font-size:0.9rem;">Energía inyectada</div>
+          <div style="font-size:1.6rem; font-weight:800; color:#6ef08a;">${Utils.round(injected, 2)} kWh</div>
+          <small>Hacia la red</small>
+        </div>
+        <div style="background:rgba(255,255,255,0.05); padding:15px; border-radius:10px;">
+          <div style="color:#9eddd6; font-size:0.9rem;">Energía usada de baterías</div>
+          <div style="font-size:1.6rem; font-weight:800; color:#f48c06;">${Utils.round(descargaBatWh, 2)} kWh</div>
+          <small>Descarga para cubrir consumo</small>
+        </div>
+        <div style="background:rgba(255,255,255,0.05); padding:15px; border-radius:10px;">
+          <div style="color:#9eddd6; font-size:0.9rem;">Energía cargada a baterías</div>
+          <div style="font-size:1.6rem; font-weight:800; color:#4361ee;">${Utils.round(cargaBatWh, 2)} kWh</div>
+          <small>Carga proveniente de solar excedente</small>
         </div>
       </div>
-      <div style="background:rgba(255,255,255,0.03); padding:15px; border-radius:10px; margin-top:20px;">
-        <h4 style="color:var(--accent); margin-top:0;">Eficiencia del Sistema</h4>
-        <p><strong>Autoconsumo:</strong> ${Utils.round(autocons, 2)} kWh (${Utils.round((autocons/solar)*100, 1)}% de la generación solar)</p>
-        <p><strong>Autosuficiencia:</strong> ${Utils.round((1 - imported/consumed)*100, 1)}% del consumo cubierto por recursos propios</p>
+
+      <div style="background:rgba(255,255,255,0.03); padding:15px; border-radius:10px; margin-top:10px;">
+        <h4 style="color:var(--accent); margin-top:0;">Indicadores</h4>
+        <p><strong>Ratio de Autoconsumo:</strong> ${solar > 0 ? Utils.round((autocons_kwh/solar)*100, 1) : 0}% de la generación se usa en sitio</p>
+        <p><strong>Autosuficiencia:</strong> ${consumed > 0 ? Utils.round((1 - imported/consumed)*100, 1) : 0}% del consumo cubierto sin red</p>
+      </div>
+
+      <div style="background:rgba(255,255,255,0.03); padding:15px; border-radius:10px; margin-top:10px;">
+        <h4 style="color:var(--accent); margin-top:0;">Leyenda (Generación Distribuida)</h4>
+        <ul style="margin:8px 0 0 18px; line-height:1.6;">
+          <li><strong>Autoconsumo:</strong> parte de la generación solar que alimenta cargas internas al instante.</li>
+          <li><strong>Energía importada:</strong> energía tomada desde la red para cubrir demanda cuando solar+batería no alcanzan.</li>
+          <li><strong>Energía inyectada:</strong> excedentes solares enviados a la red.</li>
+          <li><strong>Energía usada de baterías:</strong> descarga del banco para cubrir consumo.</li>
+          <li><strong>Energía cargada a baterías:</strong> energía almacenada desde excedente solar.</li>
+        </ul>
       </div>
     `;
-    
+
     document.getElementById('modalTitle').textContent = 'Resumen del Día - Detalle';
     document.getElementById('modalBody').innerHTML = html;
     document.getElementById('modalFooter').innerHTML = '<small>Datos basados en simulación de 24 horas</small>';

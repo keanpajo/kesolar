@@ -243,7 +243,11 @@
       <!-- Resto del contenido del dashboard -->
       <div id="infoEquipo">
         <div class="left">
-          <h2 id="tituloEquipo">Equipo</h2>
+          <div class="titulo-equipo-row" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+            <h2 id="tituloEquipo" style="margin:0;">Equipo</h2>
+            <button id="configSuscripcionBtn">⚙️ Configurar Suscripción</button>
+            <button id="volver">Volver</button>
+          </div>
           <div id="estadoLinea" class="small"></div>
           <div id="clienteDetalle" class="cliente-detalle" style="display:none;">
             <!-- Aquí se mostrará la información del cliente -->
@@ -254,13 +258,6 @@
             <!-- Eliminamos los controles de SOC y DOD de aquí -->
           </div>
           <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end">
-            <div>
-              <!-- Botón para abrir configuración de suscripción -->
-              <button id="configSuscripcionBtn">⚙️ Configurar Suscripción</button>
-            </div>
-            <div>
-              <button id="volver">Volver</button>
-            </div>
           </div>
         </div>
       </div>
@@ -319,6 +316,7 @@
         </div>
         <div class="dato" id="cardTempInv" data-type="tempInv"><h3>Temperatura Inversor</h3><div class="valor" id="temperaturaInv">-- °C</div></div>
         <div class="dato"><h3>Estado Inversor</h3><div class="valor" id="estadoInv">--</div></div>
+        <div class="dato"><h3>Estado Conexión</h3><div class="valor" id="estadoConexion">--</div></div>
       </div>
       <div class="graficos">
         <div class="chart-container"><canvas id="historialDiario"></canvas><small>Consumo vs Producción (24h)</small></div>
@@ -356,6 +354,11 @@
           <canvas id="historialAnual"></canvas>
           <small>Producción Anual</small>
         </div>
+      </div>
+
+      <div class="chart-container">
+        <canvas id="historialAnualConsumo"></canvas>
+        <small>Consumo Anual</small>
       </div>
     </div>
   </main>
@@ -744,7 +747,7 @@
       }
       
       // Función para inicializar mapa con Leaflet
-      function initMap(lat, lng, title) {
+      function initMap(lat, lng, title, address) {
         // Limpiar mapa existente si hay uno
         if (map) {
           map.remove();
@@ -764,7 +767,8 @@
           .openPopup();
         
         // Actualizar información en el modal
-        modalAddress.textContent = direccionInput.value || 'Dirección no disponible';
+        // Preferir la dirección del cliente si fue provista; si no, usar el input del formulario
+        modalAddress.textContent = (address && address.trim()) || (direccionInput && direccionInput.value) || 'Dirección no disponible';
         modalCoords.textContent = `${lat}, ${lng}`;
       }
       
@@ -801,7 +805,7 @@
         mapModal.style.display = 'flex';
         // Inicializar el mapa después de que el modal esté visible
         setTimeout(() => {
-          initMap(parseFloat(cliente.lat), parseFloat(cliente.lng), cliente.nombre);
+          initMap(parseFloat(cliente.lat), parseFloat(cliente.lng), cliente.nombre, cliente.direccion);
         }, 100);
       };
       

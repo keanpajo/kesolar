@@ -819,7 +819,9 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     quoteNumber: quoteData.quoteNumber,
-                    data: quoteData
+                    data: quoteData,
+                    logoDataUrl: currentLogoDataUrl,
+                    signatureDataUrl: currentSignatureDataUrl
                 })
             });
 
@@ -828,6 +830,15 @@
             if (response.ok) {
                 updateSyncStatus('connected', `Guardado ${result.synced ? 'y sincronizado' : 'localmente'}`);
                 btn.innerHTML = '<i class="fas fa-check-circle"></i> ¡Guardado!';
+                
+                // Guardar en localStorage como respaldo
+                localStorage.setItem('lastSavedQuote', quoteData.quoteNumber);
+                localStorage.setItem(`quote_${quoteData.quoteNumber}`, JSON.stringify({
+                    data: quoteData,
+                    logoDataUrl: currentLogoDataUrl,
+                    signatureDataUrl: currentSignatureDataUrl,
+                    savedAt: new Date().toISOString()
+                }));
                 
                 setTimeout(() => {
                     btn.innerHTML = originalText;
@@ -953,13 +964,33 @@
                 companyUtilityPercent.value = data.utility?.utilityPercent || '0';
                 utilityCostBase.value = data.utility?.costBase || '0';
 
+                // Restaurar imágenes si existen
+                if (result.data.logoDataUrl) {
+                    currentLogoDataUrl = result.data.logoDataUrl;
+                    updateLogoPreview(currentLogoDataUrl);
+                }
+
+                if (result.data.signatureDataUrl) {
+                    currentSignatureDataUrl = result.data.signatureDataUrl;
+                }
+
                 updatePreviewFromState();
-                console.log('Cotización restaurada desde servidor');
+                console.log('Cotización restaurada desde ' + result.source);
             }
         } catch (error) {
             console.warn('No se pudo cargar cotización guardada:', error);
         }
     }
+
+    // Cargar automáticamente la última cotización guardada al iniciar
+    window.addEventListener('load', () => {
+        const lastQuote = localStorage.getItem('lastSavedQuote');
+        if (lastQuote && quoteNumber.value === 'COT-2026-001') {
+            // Solo cargar si es el número por defecto
+            quoteNumber.value = lastQuote;
+            loadSavedQuote(lastQuote);
+        }
+    });
 
     // Inicializar al cargar la página
     initGithubSync();

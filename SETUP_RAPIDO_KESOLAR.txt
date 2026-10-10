@@ -1,0 +1,152 @@
+⚡ CONFIGURACIÓN RÁPIDA - KESOLAR + GITHUB SYNC
+
+═══════════════════════════════════════════════════════════════════════════
+
+EN 3 MINUTOS ESTARÁ LISTA
+
+1. OBTENER GITHUB TOKEN
+   → https://github.com/settings/tokens
+   → "Generate new token (classic)"
+   → Marca: ✓ repo
+   → Copy (40+ caracteres)
+
+2. EDITAR .env
+   → Abre: backend/.env
+   
+   Reemplaza:
+   ─────────────────────────────────────
+   PORT=3001
+   GITHUB_TOKEN=tu_token_aqui
+   GITHUB_REPO=keanpajo/kesolar
+   GITHUB_BRANCH=main
+   ─────────────────────────────────────
+
+3. INSTALAR Y EJECUTAR
+   PowerShell:
+   
+   cd "C:\Users\kevin\Documents\plataforma edicion\backend"
+   npm install
+   npm start
+
+   Deberías ver:
+   ✓ Servidor escuchando en http://localhost:3001
+   ✓ GitHub sincronización activada: keanpajo/kesolar
+
+═══════════════════════════════════════════════════════════════════════════
+
+¿LISTO? USA LA PLATAFORMA
+
+1. Abre: C:\Users\kevin\Documents\plataforma edicion\index.html
+
+2. Sube un LOGO
+   → Carga una imagen en "Logo (adjuntar imagen)"
+   → Verás vista previa
+
+3. LLENA LOS DATOS
+   → Nombre empresa
+   → RUT
+   → Teléfono
+   → Etc.
+
+4. CLICK EN "GUARDAR EN NUBE" ☁️
+
+5. ✓ LISTO
+   → Logo guardado en GitHub PARA SIEMPRE
+   → Datos guardados en GitHub PARA SIEMPRE
+   → Próxima vez que abras: TODO SE CARGA AUTOMÁTICAMENTE
+
+═══════════════════════════════════════════════════════════════════════════
+
+VERIFICAR QUE FUNCIONA
+
+1. Abre: https://github.com/keanpajo/kesolar
+
+2. Busca carpeta: cotizaciones/
+
+3. Deberías ver:
+   ✓ COT-2026-001.json (tus datos)
+   ✓ COT-2026-001-logo.png (tu logo)
+   ✓ COT-2026-001-firma.png (tu firma)
+
+4. Haz click en COT-2026-001.json
+
+5. Verás algo como:
+   {
+     "quoteNumber": "COT-2026-001",
+     "companyData": {
+       "name": "INGENIERÍA Y ENERGÍA KESOLAR...",
+       ...
+     }
+   }
+
+═══════════════════════════════════════════════════════════════════════════
+
+LO QUE AHORA SUCEDE
+
+CAMBIO 1: Subes nuevo logo
+┌─────────────────────────┐
+│ 1. Subes logo           │
+│ 2. Click "Guardar"      │
+│ 3. Logo en GitHub ✓     │
+│ 4. Abrirá página mañana │
+│ 5. Logo cargado ✓       │
+└─────────────────────────┘
+
+CAMBIO 2: Cambias número de empresa
+┌─────────────────────────┐
+│ 1. Cambias RUT          │
+│ 2. Click "Guardar"      │
+│ 3. RUT en GitHub ✓      │
+│ 4. Abrirá página mañana │
+│ 5. RUT mostrado ✓       │
+└─────────────────────────┘
+
+CAMBIO 3: Cambias teléfono
+┌─────────────────────────┐
+│ 1. Cambias teléfono     │
+│ 2. Click "Guardar"      │
+│ 3. Teléfono en GitHub ✓ │
+│ 4. Abrirá página mañana │
+│ 5. Teléfono mostrado ✓  │
+└─────────────────────────┘
+
+═══════════════════════════════════════════════════════════════════════════
+
+ESTRUCTURA EN GITHUB DESPUÉS
+
+keanpajo/kesolar/
+├── [tus archivos actuales]
+└── cotizaciones/                          ← Carpeta nueva
+    ├── COT-2026-001.json                 ← Datos
+    ├── COT-2026-001-logo.png             ← Logo
+    ├── COT-2026-001-firma.png            ← Firma
+    ├── COT-2026-002.json
+    ├── COT-2026-002-logo.png
+    └── ...
+
+═══════════════════════════════════════════════════════════════════════════
+
+PUNTOS CLAVE
+
+✓ Cada cotización = número único (COT-2026-001, COT-2026-002, etc)
+✓ Cada cotización tiene su logo
+✓ Cada cotización tiene su firma
+✓ Puedes cambiar logo/datos en cualquier momento
+✓ Los cambios se guardan PERMANENTEMENTE en GitHub
+✓ Al abrir la página, carga datos desde GitHub automáticamente
+✓ Si no hay internet, funciona offline (sincroniza después)
+
+═══════════════════════════════════════════════════════════════════════════
+
+YA ESTÁ
+
+No hay más pasos. La plataforma:
+- Guarda logo ✓
+- Guarda datos ✓
+- Sincroniza con GitHub ✓
+- Carga datos al abrir ✓
+- Funciona offline ✓
+
+Todo automático. Solo usa la plataforma normalmente.
+
+═══════════════════════════════════════════════════════════════════════════

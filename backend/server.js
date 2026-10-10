@@ -55,11 +55,11 @@ const octokit = new Octokit({
 
 /**
  * POST /api/cotizaciones
- * Guardar o actualizar cotización y sincronizar con GitHub
+ * Guardar o actualizar cotización con imágenes y sincronizar con GitHub
  */
 app.post('/api/cotizaciones', async (req, res) => {
   try {
-    const { quoteNumber, data } = req.body;
+    const { quoteNumber, data, logoDataUrl, signatureDataUrl } = req.body;
 
     if (!quoteNumber || !data) {
       return res.status(400).json({ error: 'quote_number y data son requeridos' });
@@ -78,7 +78,7 @@ app.post('/api/cotizaciones', async (req, res) => {
     // Sincronizar con GitHub si token está disponible
     let githubResult = null;
     if (process.env.GITHUB_TOKEN && process.env.GITHUB_REPO) {
-      githubResult = await syncToGithub(quoteNumber, data);
+      githubResult = await syncToGithub(quoteNumber, data, logoDataUrl, signatureDataUrl);
     }
 
     // Log
@@ -101,11 +101,73 @@ app.post('/api/cotizaciones', async (req, res) => {
 
 /**
  * GET /api/cotizaciones/:quoteNumber
- * Obtener cotización guardada
+ * Obtener cotización guardada (local o desde GitHub)
  */
 app.get('/api/cotizaciones/:quoteNumber', async (req, res) => {
   try {
     const { quoteNumber } = req.params;
+    
+    // Intentar obtener de GitHub primero
+    if (process.env.GITHUB_TOKEN && process.env.GITHUB_REPO) {
+      try {
+        const [owner, repo] = process.env.GITHUB_REPO.split('/');
+        const branch = process.env.GITHUB_BRANCH || 'main';
+        const filePath = `cotizaciones/${quoteNumber}.json`;
+        
+        const response = await octokit.rest.repos.getContent({
+          owner,
+          repo,
+          path: filePath,
+          ref: branch
+        });
+
+        const data = JSON.parse(Buffer.from(response.data.content, 'base64').toString());
+
+        // Obtener también logo y firma si existen
+        let logoUrl = null;
+        let signatureUrl = null;
+
+        try {
+          const logoResponse = await octokit.rest.repos.getContent({
+            owner,
+            repo,
+            path: `cotizaciones/${quoteNumber}-logo.png`,
+            ref: branch
+          });
+          logoUrl = `data:image/png;base64,${logoResponse.data.content}`;
+        } catch (e) {
+          // No existe logo
+        }
+
+        try {
+          const sigResponse = await octokit.rest.repos.getContent({
+            owner,
+            repo,
+            path: `cotizaciones/${quoteNumber}-firma.png`,
+            ref: branch
+          });
+          signatureUrl = `data:image/png;base64,${sigResponse.data.content}`;
+        } catch (e) {
+          // No existe firma
+        }
+
+        return res.json({
+          success: true,
+          source: 'github',
+          data: {
+            quoteNumber,
+            data: data,
+            logoDataUrl: logoUrl,
+            signatureDataUrl: signatureUrl,
+            syncedToGithub: true
+          }
+        });
+      } catch (githubError) {
+        // Si no está en GitHub, continuar con base de datos local
+      }
+    }
+
+    // Obtener de base de datos local
     const stmt = db.prepare('SELECT * FROM cotizaciones WHERE quote_number = ? LIMIT 1');
     const row = stmt.get(quoteNumber);
 
@@ -115,6 +177,7 @@ app.get('/api/cotizaciones/:quoteNumber', async (req, res) => {
 
     res.json({
       success: true,
+      source: 'local',
       data: {
         quoteNumber: row.quote_number,
         data: JSON.parse(row.data),
@@ -253,41 +316,62 @@ app.get('/api/health', (req, res) => {
 // ===== FUNCIONES AUXILIARES =====
 
 /**
- * Sincronizar cotización a GitHub
+ * Sincronizar cotización a GitHub con datos e imágenes
  */
-async function syncToGithub(quoteNumber, data) {
+async function syncToGithub(quoteNumber, data, logoDataUrl = null, signatureDataUrl = null) {
   if (!process.env.GITHUB_TOKEN || !process.env.GITHUB_REPO) {
     throw new Error('GitHub no está configurado');
   }
 
   const [owner, repo] = process.env.GITHUB_REPO.split('/');
-  const filePath = `cotizaciones/${quoteNumber}.json`;
-  const content = JSON.stringify(data, null, 2);
-  const encodedContent = Buffer.from(content).toString('base64');
-
+  const branch = process.env.GITHUB_BRANCH || 'main';
+  
   try {
-    // Verificar si el archivo ya existe
+    // 1. Guardar datos principales en JSON
+    const filePath = `cotizaciones/${quoteNumber}.json`;
+    const content = JSON.stringify({
+      ...data,
+      _metadata: {
+        timestamp: new Date().toISOString(),
+        hasLogo: !!logoDataUrl,
+        hasSignature: !!signatureDataUrl
+      }
+    }, null, 2);
+    const encodedContent = Buffer.from(content).toString('base64');
+
     let sha = null;
     try {
       const existing = await octokit.rest.repos.getContent({
         owner,
         repo,
-        path: filePath
+        path: filePath,
+        ref: branch
       });
       sha = existing.data.sha;
     } catch (e) {
-      // Archivo no existe, crear nuevo
+      // Archivo no existe
     }
 
-    // Crear o actualizar archivo
-    const response = await octokit.rest.repos.createOrUpdateFileContents({
+    // Guardar JSON con datos
+    const responseJson = await octokit.rest.repos.createOrUpdateFileContents({
       owner,
       repo,
       path: filePath,
       message: `Actualizar cotización: ${quoteNumber} (${new Date().toISOString()})`,
       content: encodedContent,
-      sha: sha || undefined
+      sha: sha || undefined,
+      branch: branch
     });
+
+    // 2. Guardar logo si existe
+    if (logoDataUrl && logoDataUrl.startsWith('data:')) {
+      await saveImageToGithub(owner, repo, branch, `cotizaciones/${quoteNumber}-logo.png`, logoDataUrl);
+    }
+
+    // 3. Guardar firma si existe
+    if (signatureDataUrl && signatureDataUrl.startsWith('data:')) {
+      await saveImageToGithub(owner, repo, branch, `cotizaciones/${quoteNumber}-firma.png`, signatureDataUrl);
+    }
 
     // Actualizar en base de datos
     const updateStmt = db.prepare(`
@@ -295,17 +379,55 @@ async function syncToGithub(quoteNumber, data) {
       SET synced_to_github = 1, github_commit_sha = ?
       WHERE quote_number = ?
     `);
-    updateStmt.run(response.commit.sha, quoteNumber);
+    updateStmt.run(responseJson.commit.sha, quoteNumber);
 
     return {
       success: true,
-      commit_sha: response.commit.sha,
-      url: response.commit.html_url
+      commit_sha: responseJson.commit.sha,
+      url: responseJson.commit.html_url
     };
 
   } catch (error) {
     console.error(`Error sincronizando ${quoteNumber} a GitHub:`, error);
     throw error;
+  }
+}
+
+/**
+ * Guardar imagen en GitHub desde data URL
+ */
+async function saveImageToGithub(owner, repo, branch, filePath, dataUrl) {
+  try {
+    // Extraer base64 de data URL
+    const base64Data = dataUrl.split(',')[1];
+    if (!base64Data) return;
+
+    let sha = null;
+    try {
+      const existing = await octokit.rest.repos.getContent({
+        owner,
+        repo,
+        path: filePath,
+        ref: branch
+      });
+      sha = existing.data.sha;
+    } catch (e) {
+      // Archivo no existe
+    }
+
+    await octokit.rest.repos.createOrUpdateFileContents({
+      owner,
+      repo,
+      path: filePath,
+      message: `Actualizar imagen: ${filePath.split('/')[1]}`,
+      content: base64Data,
+      sha: sha || undefined,
+      branch: branch
+    });
+
+    console.log(`✓ Imagen guardada: ${filePath}`);
+  } catch (error) {
+    console.warn(`Advertencia al guardar imagen ${filePath}:`, error.message);
   }
 }
 

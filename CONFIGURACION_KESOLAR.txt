@@ -1,0 +1,211 @@
+🔗 CONFIGURACIÓN PARA TU REPOSITORIO ACTUAL
+
+═══════════════════════════════════════════════════════════════════════════
+
+REPOSITORIO ACTUAL:
+• URL: https://github.com/keanpajo/kesolar
+• Sitio: https://kesolar.contacto-kesolar.workers.dev/
+• Branch: main (por defecto)
+
+═══════════════════════════════════════════════════════════════════════════
+
+¿QUÉ HACE AHORA?
+
+Cuando guardes cambios en la plataforma de cotizaciones:
+
+✓ Todos los datos se guardan PERMANENTEMENTE en tu repositorio keanpajo/kesolar
+✓ El logo que subas se guarda en la nube (carpeta /cotizaciones/)
+✓ La firma que subas se guarda en la nube
+✓ Todos los cambios (nombre empresa, teléfono, etc.) se guardan
+✓ Cada vez que abrras la página, carga los datos guardados
+✓ El logo sigue ahí aunque cierres el navegador
+
+═══════════════════════════════════════════════════════════════════════════
+
+CONFIGURACIÓN (3 PASOS)
+
+1️⃣ Crear/Copiar tu GitHub Token
+
+   Ve a: https://github.com/settings/tokens
+   
+   Si YA TIENES uno, usa ese. Si no, crea uno nuevo:
+   - Click "Generate new token (classic)"
+   - Note: "Cotizaciones KESOLAR"
+   - Scope: ✓ repo
+   - Copy token
+
+2️⃣ Configurar el archivo .env
+
+   En: backend/.env
+   
+   Cambia:
+   GITHUB_TOKEN=tu_token_aqui
+   GITHUB_REPO=keanpajo/kesolar
+   GITHUB_BRANCH=main
+   PORT=3001
+
+3️⃣ Instalar y ejecutar
+
+   PowerShell:
+   cd backend
+   npm install
+   npm start
+
+═══════════════════════════════════════════════════════════════════════════
+
+ESTRUCTURA EN GITHUB
+
+Tu repositorio keanpajo/kesolar tendrá:
+
+keanpajo/kesolar
+├── [archivos existentes]
+└── cotizaciones/
+    ├── COT-2026-001.json         ← Datos de cotización
+    ├── COT-2026-001-logo.png     ← Logo que subiste
+    ├── COT-2026-001-firma.png    ← Firma que subiste
+    ├── COT-2026-002.json
+    ├── COT-2026-002-logo.png
+    └── ...
+
+═══════════════════════════════════════════════════════════════════════════
+
+EJEMPLO DE FLUJO
+
+1. Usuario abre index.html
+2. Carga datos guardados (logo, firma, datos empresa) desde GitHub
+3. Usuario CAMBIA el logo o datos
+4. Usuario hace click en "Guardar en nube"
+5. ✓ Logo se sube a GitHub (cotizaciones/COT-2026-001-logo.png)
+6. ✓ Datos se guardan (cotizaciones/COT-2026-001.json)
+7. ✓ Cambios son PERMANENTES
+8. Usuario vuelve a abrir página mañana
+9. ✓ El logo SIGUE AHÍ (cargado desde GitHub)
+
+═══════════════════════════════════════════════════════════════════════════
+
+¿QUÉ SE GUARDA EN LA NUBE?
+
+En cada cotización se guarda:
+
+📄 JSON (datos):
+{
+  "quoteNumber": "COT-2026-001",
+  "companyData": {
+    "name": "INGENIERÍA Y ENERGÍA KESOLAR SPA",
+    "rut": "77.753.882-9",
+    "address": "PJE LUIS PENAILILLO 1053, COQUIMBO",
+    "phone": "+56 9 4525 9288",
+    "email": "contacto.kesolar@gmail.com"
+  },
+  "clientData": { /* ... */ },
+  "items": [ /* productos */ ],
+  "signer": { /* firma */ },
+  "_metadata": {
+    "timestamp": "2026-10-10T...",
+    "hasLogo": true,
+    "hasSignature": true
+  }
+}
+
+🖼️ PNG (imágenes):
+- Logo: COT-2026-001-logo.png (base64 binario)
+- Firma: COT-2026-001-firma.png (base64 binario)
+
+═══════════════════════════════════════════════════════════════════════════
+
+CÓMO VERIFICAR QUE FUNCIONA
+
+1. Sube un logo en la plataforma
+2. Completa datos de empresa (nombre, teléfono, etc.)
+3. Click en "Guardar en nube"
+4. Ve a https://github.com/keanpajo/kesolar/tree/main/cotizaciones
+5. Deberías ver:
+   - JSON con tus datos ✓
+   - PNG con tu logo ✓
+   - PNG con tu firma (si la agregaste) ✓
+
+═══════════════════════════════════════════════════════════════════════════
+
+VENTAJAS
+
+✨ El logo se queda PARA SIEMPRE en GitHub
+✨ Cuando abres la página, se carga el logo guardado
+✨ Si cambias el logo, se reemplaza en GitHub
+✨ Control de versiones - ves el historio de cambios en GitHub
+✨ Backup automático
+✨ Acceso desde cualquier dispositivo
+✨ Los datos se sincronizar cada 30 segundos
+
+═══════════════════════════════════════════════════════════════════════════
+
+CAMBIOS EN TU FLUJO
+
+ANTES (sin sincronización):
+1. Abres página
+2. Subes logo
+3. Cierras navegador
+4. Abres página MAÑANA
+5. ❌ Logo desapareció
+
+AHORA (con sincronización):
+1. Abres página
+2. Subes logo
+3. Click "Guardar en nube"
+4. ✓ Logo guardado en GitHub
+5. Cierras navegador
+6. Abres página MAÑANA
+7. ✓ Logo cargado automáticamente desde GitHub
+
+═══════════════════════════════════════════════════════════════════════════
+
+ESPECIFICIDADES
+
+• El número de cotización es la clave identificadora
+  → Cada número = cotización diferente
+  → COT-2026-001, COT-2026-002, etc.
+
+• Puedes tener múltiples cotizaciones
+  → Cada una con su propio logo
+  → Cada una con sus propios datos
+
+• Auto-sincronización
+  → Cada 30 segundos los cambios se guardan
+  → No tienes que hacer click si no quieres
+
+• Modo offline
+  → Funciona sin internet
+  → Se sincroniza cuando reconectas
+
+═══════════════════════════════════════════════════════════════════════════
+
+PRÓXIMOS PASOS
+
+1. Configura tu .env con:
+   - Tu GitHub token (de https://github.com/settings/tokens)
+   - GITHUB_REPO=keanpajo/kesolar
+   
+2. npm start
+
+3. ¡Usa la plataforma!
+   - Todos los cambios se guardan automáticamente en tu repo
+
+═══════════════════════════════════════════════════════════════════════════
+
+¿PREGUNTAS?
+
+✓ "¿Se queda el logo para siempre?"
+   Sí, guardado en GitHub. Se reemplaza solo si subes otro logo.
+
+✓ "¿Qué pasa si cambio de dispositivo?"
+   Abre la página en otro PC y carga los datos desde GitHub.
+
+✓ "¿Puedo tener diferentes logos por cotización?"
+   Sí, cada cotización (número) tiene su propio logo/firma.
+
+✓ "¿Se ven los cambios en GitHub inmediatamente?"
+   Sí, en https://github.com/keanpajo/kesolar/tree/main/cotizaciones
+
+═══════════════════════════════════════════════════════════════════════════
+
+Hecho con ❤️ para KESOLAR
+Sincronización permanente en la nube ✓

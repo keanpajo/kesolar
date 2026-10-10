@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Administración - Sincronización GitHub</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .header h1 {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 0.95rem;
+        }
+
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .status-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .status-card h3 {
+            font-size: 0.9rem;
+            color: #999;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+
+        .status-card .value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .status-card.success .value {
+            color: #10b981;
+        }
+
+        .status-card.error .value {
+            color: #ef4444;
+        }
+
+        .status-card.warning .value {
+            color: #f59e0b;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            background: white;
+            padding: 0;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .tab {
+            flex: 1;
+            padding: 15px;
+            background: #f5f5f5;
+            border: none;
+            cursor: pointer;
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: #666;
+            transition: all 0.3s ease;
+        }
+
+        .tab.active {
+            background: #667eea;
+            color: white;
+        }
+
+        .tab:hover {
+            background: #e5e7eb;
+        }
+
+        .tab.active:hover {
+            background: #667eea;
+        }
+
+        .content {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+
+        .table th {
+            background: #f5f5f5;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            color: #666;
+            border-bottom: 2px solid #e5e7eb;
+        }
+
+        .table td {
+            padding: 12px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .table tr:hover {
+            background: #fafafa;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .status-badge.success {
+            background: #d1fae5;
+            color: #047857;
+        }
+
+        .status-badge.error {
+            background: #fee2e2;
+            color: #dc2626;
+        }
+
+        .status-badge.pending {
+            background: #fef3c7;
+            color: #d97706;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #f5f5f5;
+            color: #333;
+            border: 1px solid #e5e7eb;
+        }
+
+        .btn-secondary:hover {
+            background: #e5e7eb;
+        }
+
+        .btn-danger {
+            background: #ef4444;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #dc2626;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+
+        .empty-state i {
+            font-size: 3rem;
+            margin-bottom: 15px;
+            opacity: 0.5;
+        }
+
+        .code-block {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem;
+            line-height: 1.5;
+            margin: 15px 0;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f5f5f5;
+            border-radius: 50%;
+            border-top-color: #667eea;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .alert {
+            padding: 15px 20px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .alert.info {
+            background: #dbeafe;
+            color: #1e40af;
+            border-left: 4px solid #3b82f6;
+        }
+
+        .alert.success {
+            background: #d1fae5;
+            color: #047857;
+            border-left: 4px solid #10b981;
+        }
+
+        .alert.error {
+            background: #fee2e2;
+            color: #991b1b;
+            border-left: 4px solid #ef4444;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 1.5rem;
+            }
+
+            .status-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .tabs {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <h1>
+            <i class="fas fa-cloud-upload-alt" style="color: #667eea;"></i>
+            Dashboard de Sincronización
+        </h1>
+        <p>Control y monitoreo de la sincronización de cotizaciones con GitHub</p>
+    </div>
+
+    <!-- Status Cards -->
+    <div class="status-grid">
+        <div class="status-card success" id="cardHealth">
+            <h3>Estado del Servidor</h3>
+            <div class="value">
+                <span class="loading"></span>
+            </div>
+        </div>
+
+        <div class="status-card" id="cardQuotes">
+            <h3>Total de Cotizaciones</h3>
+            <div class="value" id="quoteCount">--</div>
+        </div>
+
+        <div class="status-card" id="cardSync">
+            <h3>Últimas Sincronizaciones</h3>
+            <div class="value" id="syncCount">--</div>
+        </div>
+
+        <div class="status-card" id="cardGithub">
+            <h3>GitHub Configurado</h3>
+            <div class="value" id="githubStatus">--</div>
+        </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+        <button class="tab active" onclick="switchTab('quotes')">
+            <i class="fas fa-file-invoice-dollar"></i> Cotizaciones
+        </button>
+        <button class="tab" onclick="switchTab('sync')">
+            <i class="fas fa-history"></i> Historial de Sincronización
+        </button>
+        <button class="tab" onclick="switchTab('config')">
+            <i class="fas fa-cog"></i> Configuración
+        </button>
+        <button class="tab" onclick="switchTab('api')">
+            <i class="fas fa-code"></i> API
+        </button>
+    </div>
+
+    <!-- Content -->
+    <div class="content">
+        <!-- Cotizaciones -->
+        <div id="quotes" class="tab-content active">
+            <button class="btn btn-primary" onclick="loadQuotes()">
+                <i class="fas fa-sync"></i> Recargar
+            </button>
+            <div id="quotesContainer" style="margin-top: 20px;">
+                <p style="color: #999;">Cargando...</p>
+            </div>
+        </div>
+
+        <!-- Historial -->
+        <div id="sync" class="tab-content">
+            <button class="btn btn-primary" onclick="loadSyncLog()">
+                <i class="fas fa-sync"></i> Recargar
+            </button>
+            <div id="syncContainer" style="margin-top: 20px;">
+                <p style="color: #999;">Cargando...</p>
+            </div>
+        </div>
+
+        <!-- Configuración -->
+        <div id="config" class="tab-content">
+            <div class="alert info">
+                <i class="fas fa-info-circle"></i>
+                <span>Esta página es de solo lectura. Para cambiar configuración, edita <code>.env</code> en el servidor.</span>
+            </div>
+
+            <h3>Estado del Servidor</h3>
+            <div id="configContainer" style="margin-top: 20px;">
+                <p style="color: #999;">Cargando...</p>
+            </div>
+
+            <h3 style="margin-top: 30px;">Próximos Pasos</h3>
+            <ol style="line-height: 1.8; margin-left: 20px; margin-top: 15px;">
+                <li>Edita <code>backend/.env</code> con tus credenciales de GitHub</li>
+                <li>Copia tu GitHub Token desde: <a href="https://github.com/settings/tokens" target="_blank">https://github.com/settings/tokens</a></li>
+                <li>Copia tu repositorio en formato: <code>usuario/repositorio</code></li>
+                <li>Reinicia el servidor: <code>npm start</code></li>
+                <li>Los cambios se sincronizarán automáticamente cada 30 segundos</li>
+            </ol>
+        </div>
+
+        <!-- API -->
+        <div id="api" class="tab-content">
+            <h3>Endpoints Disponibles</h3>
+
+            <h4 style="margin-top: 20px;">Health Check</h4>
+            <div class="code-block">GET /api/health</div>
+            <p>Verifica que el servidor está en línea y configurado correctamente.</p>
+
+            <h4 style="margin-top: 20px;">Guardar Cotización</h4>
+            <div class="code-block">POST /api/cotizaciones
+Content-Type: application/json
+
+{
+  "quoteNumber": "COT-2026-001",
+  "data": { /* datos completos */ }
+}</div>
+
+            <h4 style="margin-top: 20px;">Obtener Cotización</h4>
+            <div class="code-block">GET /api/cotizaciones/COT-2026-001</div>
+
+            <h4 style="margin-top: 20px;">Listar Todas</h4>
+            <div class="code-block">GET /api/cotizaciones</div>
+
+            <h4 style="margin-top: 20px;">Ver Historial</h4>
+            <div class="code-block">GET /api/sync-log</div>
+
+            <div class="alert info" style="margin-top: 20px;">
+                <i class="fas fa-lightbulb"></i>
+                <span>Accede a estos endpoints desde JavaScript: <code>fetch('http://localhost:3001/api/...')</code></span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const API_BASE = 'http://localhost:3001/api';
+
+    // Switch tabs
+    function switchTab(tab) {
+        document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+        document.getElementById(tab).classList.add('active');
+        event.target.closest('.tab').classList.add('active');
+
+        if (tab === 'quotes') loadQuotes();
+        if (tab === 'sync') loadSyncLog();
+        if (tab === 'config') loadConfig();
+    }
+
+    // Cargar estado general
+    async function loadHealth() {
+        try {
+            const res = await fetch(`${API_BASE}/health`);
+            const data = await res.json();
+
+            const card = document.getElementById('cardHealth');
+            const github = document.getElementById('cardGithub');
+
+            if (data.github_configured) {
+                card.className = 'status-card success';
+                card.innerHTML = '<h3>Estado del Servidor</h3><div class="value">✓ Activo</div>';
+
+                github.className = 'status-card success';
+                github.innerHTML = '<h3>GitHub Configurado</h3><div class="value">✓ Sí</div>';
+            } else {
+                card.className = 'status-card warning';
+                card.innerHTML = '<h3>Estado del Servidor</h3><div class="value">✓ Activo</div>';
+
+                github.className = 'status-card warning';
+                github.innerHTML = '<h3>GitHub Configurado</h3><div class="value">⚠ No</div>';
+            }
+        } catch (error) {
+            document.getElementById('cardHealth').className = 'status-card error';
+            document.getElementById('cardHealth').innerHTML = '<h3>Estado del Servidor</h3><div class="value">✗ Error</div>';
+        }
+    }
+
+    // Cargar cotizaciones
+    async function loadQuotes() {
+        try {
+            const res = await fetch(`${API_BASE}/cotizaciones`);
+            const data = await res.json();
+
+            document.getElementById('quoteCount').textContent = data.count;
+
+            let html = '';
+            if (data.count === 0) {
+                html = '<div class="empty-state"><i class="fas fa-inbox"></i><p>Sin cotizaciones aún</p></div>';
+            } else {
+                html = '<table class="table"><thead><tr><th>Cotización</th><th>Actualización</th><th>GitHub</th></tr></thead><tbody>';
+                data.data.forEach(q => {
+                    html += `<tr>
+                        <td><strong>${q.quote_number}</strong></td>
+                        <td>${new Date(q.updated_at).toLocaleString()}</td>
+                        <td><span class="status-badge ${q.synced_to_github ? 'success' : 'pending'}">${q.synced_to_github ? 'Sincronizada' : 'Pendiente'}</span></td>
+                    </tr>`;
+                });
+                html += '</tbody></table>';
+            }
+
+            document.getElementById('quotesContainer').innerHTML = html;
+        } catch (error) {
+            document.getElementById('quotesContainer').innerHTML = '<div class="alert error"><i class="fas fa-exclamation-circle"></i><span>Error al cargar cotizaciones</span></div>';
+        }
+    }
+
+    // Cargar historial de sincronización
+    async function loadSyncLog() {
+        try {
+            const res = await fetch(`${API_BASE}/sync-log`);
+            const data = await res.json();
+
+            document.getElementById('syncCount').textContent = data.count;
+
+            let html = '';
+            if (data.count === 0) {
+                html = '<div class="empty-state"><i class="fas fa-history"></i><p>Sin historial aún</p></div>';
+            } else {
+                html = '<table class="table"><thead><tr><th>Acción</th><th>Cotización</th><th>Estado</th><th>Hora</th><th>Mensaje</th></tr></thead><tbody>';
+                data.data.forEach(log => {
+                    html += `<tr>
+                        <td><strong>${log.action}</strong></td>
+                        <td>${log.quote_number}</td>
+                        <td><span class="status-badge ${log.status}">${log.status}</span></td>
+                        <td>${new Date(log.timestamp).toLocaleString()}</td>
+                        <td style="font-size: 0.85rem; color: #666;">${log.message || '-'}</td>
+                    </tr>`;
+                });
+                html += '</tbody></table>';
+            }
+
+            document.getElementById('syncContainer').innerHTML = html;
+        } catch (error) {
+            document.getElementById('syncContainer').innerHTML = '<div class="alert error"><i class="fas fa-exclamation-circle"></i><span>Error al cargar historial</span></div>';
+        }
+    }
+
+    // Cargar configuración
+    async function loadConfig() {
+        try {
+            const res = await fetch(`${API_BASE}/health`);
+            const data = await res.json();
+
+            let html = '<table class="table"><tbody>';
+            html += `<tr><td><strong>Estado</strong></td><td>${data.status}</td></tr>`;
+            html += `<tr><td><strong>GitHub Configurado</strong></td><td>${data.github_configured ? '✓ Sí' : '✗ No'}</td></tr>`;
+            html += `<tr><td><strong>Última Verificación</strong></td><td>${new Date(data.timestamp).toLocaleString()}</td></tr>`;
+            html += '</tbody></table>';
+
+            document.getElementById('configContainer').innerHTML = html;
+        } catch (error) {
+            document.getElementById('configContainer').innerHTML = '<div class="alert error"><i class="fas fa-exclamation-circle"></i><span>Error al cargar configuración</span></div>';
+        }
+    }
+
+    // Cargar todo al iniciar
+    window.addEventListener('load', () => {
+        loadHealth();
+        loadQuotes();
+        loadSyncLog();
+        loadConfig();
+
+        // Recargar cada 10 segundos
+        setInterval(loadHealth, 10000);
+    });
+</script>
+
+</body>
+</html>

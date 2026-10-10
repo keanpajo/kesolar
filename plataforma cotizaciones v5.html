@@ -1,0 +1,1332 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Generador de Cotizaciones | Impresión con fechas a la derecha</title>
+    <!-- html2pdf Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <!-- Font Awesome 6 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #f0f2f5;
+            font-family: 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+            padding: 30px 20px;
+            color: #1e2a3e;
+            min-width: 320px;
+            overflow-x: hidden;
+        }
+
+        .dashboard {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 28px;
+            box-shadow: 0 20px 35px -12px rgba(0,0,0,0.15);
+            overflow: hidden;
+            min-width: 0;
+        }
+
+        .header-tool {
+            background: linear-gradient(135deg, #1a3c4a 0%, #0f2c38 100%);
+            padding: 1.2rem 2rem;
+            color: white;
+        }
+        .header-tool h1 {
+            font-size: 1.7rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .header-tool p {
+            opacity: 0.85;
+            margin-top: 6px;
+            font-size: 0.9rem;
+        }
+        .badge-editable {
+            background: #2c7a6e20;
+            border-radius: 40px;
+            font-size: 0.7rem;
+            padding: 2px 10px;
+            margin-left: 15px;
+            font-weight: normal;
+        }
+
+        .builder-wrapper {
+            display: flex;
+            flex-wrap: wrap;
+            width: 100%;
+            min-width: 0;
+        }
+        .config-panel {
+            flex: 1.2;
+            min-width: 320px;
+            background: #fefefe;
+            border-right: 1px solid #e2e8f0;
+            padding: 1.8rem 1.8rem;
+            min-width: 0;
+        }
+        .preview-panel {
+            flex: 2;
+            background: #ffffff;
+            padding: 1.8rem 2rem;
+            min-width: 0;
+        }
+
+        /* Formularios */
+        .section-card {
+            background: #f9fafb;
+            border-radius: 20px;
+            padding: 1.3rem 1.5rem;
+            margin-bottom: 1.8rem;
+            border: 1px solid #e9edf2;
+        }
+        .section-title {
+            font-weight: 700;
+            font-size: 1.2rem;
+            margin-bottom: 1rem;
+            color: #0f2c38;
+            border-left: 4px solid #2c7a6e;
+            padding-left: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px 20px;
+        }
+        .full-width {
+            grid-column: span 2;
+        }
+        label {
+            font-weight: 600;
+            font-size: 0.8rem;
+            color: #2c3e44;
+            display: block;
+            margin-bottom: 4px;
+        }
+        input, textarea, select {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #ccd7e4;
+            border-radius: 14px;
+            font-size: 0.9rem;
+            background: white;
+            font-family: inherit;
+        }
+        input:focus, textarea:focus, select:focus {
+            outline: none;
+            border-color: #2c7a6e;
+            box-shadow: 0 0 0 3px rgba(44,122,110,0.2);
+        }
+        .btn-icon {
+            background: #eef2f6;
+            border: none;
+            border-radius: 40px;
+            padding: 8px 14px;
+            font-weight: 500;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.85rem;
+        }
+        .btn-primary {
+            background: #2c7a6e;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 40px;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s ease;
+        }
+        .btn-primary:hover {
+            background: #1e5f55;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .btn-secondary {
+            background: #3b6e8b;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 40px;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .btn-secondary:hover {
+            background: #2c5770;
+            transform: translateY(-2px);
+        }
+        .btn-outline {
+            background: white;
+            border: 1px solid #2c7a6e;
+            color: #2c7a6e;
+            padding: 10px 20px;
+            border-radius: 40px;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .btn-outline:hover {
+            background: #eef7f5;
+            transform: translateY(-2px);
+        }
+        .item-row {
+            background: white;
+            border-radius: 18px;
+            margin-bottom: 12px;
+            padding: 12px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: center;
+            border: 1px solid #e2edf2;
+        }
+        .item-row input {
+            flex: 2;
+            min-width: 120px;
+        }
+        .item-row .qty-input, .item-row .price-input {
+            flex: 1;
+            min-width: 90px;
+        }
+        .item-row .amount-display {
+            flex: 0.8;
+            font-weight: 700;
+            background: #f1f5f9;
+            padding: 8px 12px;
+            border-radius: 40px;
+            text-align: center;
+            color: #1f5e54;
+            font-size: 0.9rem;
+            white-space: nowrap;
+        }
+        .remove-item {
+            background: #fff0f0;
+            color: #b91c1c;
+            border: none;
+            border-radius: 40px;
+            padding: 8px 12px;
+            cursor: pointer;
+        }
+        .add-item-btn {
+            margin-top: 8px;
+            background: #eef2ff;
+            border: 1px dashed #6c8b9b;
+            width: 100%;
+            justify-content: center;
+        }
+
+        /* ESTILOS PREVIEW - SIN RECUADRO EXTERIOR */
+        .quote-preview-container {
+            background: transparent;
+            padding: 0;
+        }
+        .quote-card {
+            background: white;
+            border: none;
+            border-radius: 0;
+            padding: 0;
+            width: 100%;
+            max-width: 100%;
+            overflow-x: auto;
+            min-width: 0;
+        }
+        /* Cabecera: Logo - N° Cotización - Datos empresa */
+        .quote-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin-bottom: 28px;
+            border-bottom: 1px solid #eef2f8;
+            padding-bottom: 16px;
+        }
+        .logo-area img {
+            max-height: 70px;
+            max-width: 180px;
+            object-fit: contain;
+        }
+        .logo-placeholder {
+            background: #f1f5f9;
+            border-radius: 16px;
+            padding: 10px 15px;
+            font-size: 0.8rem;
+            color: #4a6a7a;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .quote-number-mid {
+            text-align: center;
+            font-weight: 800;
+            font-size: 1.3rem;
+            color: #1a3c4a;
+            background: #fef7e0;
+            padding: 8px 18px;
+            border-radius: 40px;
+            letter-spacing: -0.3px;
+            white-space: nowrap;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        .company-info-card {
+            background: #f9fafb;
+            border: 1px solid #e2edf2;
+            padding: 14px 18px;
+            text-align: left;
+            width: 100%;
+            max-width: 280px;
+            min-width: 220px;
+            flex-shrink: 1;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.02);
+            font-size: 0.8rem;
+            line-height: 1.45;
+            word-break: break-word;
+            overflow-wrap: anywhere;
+        }
+        .company-info-card strong {
+            color: #1f5e54;
+            font-size: 0.9rem;
+            display: block;
+            margin-bottom: 5px;
+        }
+        .company-info-card .company-detail-line {
+            margin-bottom: 4px;
+            word-break: break-word;
+        }
+        /* Cliente + fechas en misma línea con alineación derecha */
+        .client-dates-row {
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin: 20px 0 20px 0;
+            background: #ffffff;
+            padding: 0 0 8px 0;
+            min-width: 0;
+        }
+        .client-data-box {
+            flex: 2;
+            font-size: 0.85rem;
+            line-height: 1.45;
+            background: #fefefe;
+            padding: 4px 0;
+            min-width: 0;
+            word-break: break-word;
+            overflow-wrap: anywhere;
+        }
+        .dates-box {
+            text-align: right;
+            font-size: 0.85rem;
+            background: #fefefe;
+            padding: 4px 0;
+            white-space: nowrap;
+            min-width: 0;
+        }
+        .greeting-text {
+            margin: 12px 0 12px 0;
+            font-size: 0.9rem;
+            line-height: 1.4;
+            color: #1e2a3e;
+            background: #eef7f5;
+            padding: 10px 14px;
+            border-radius: 16px;
+        }
+        .preview-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            font-size: 0.85rem;
+            table-layout: fixed;
+            min-width: 0;
+        }
+        .preview-table th, .preview-table td {
+            padding: 10px 8px;
+            border-bottom: 1px solid #e9edf2;
+            word-break: break-word;
+            overflow-wrap: anywhere;
+        }
+        .preview-table th {
+            background: #eef3f7;
+            text-align: left;
+            font-weight: 700;
+            border-bottom: 2px solid #cbdde6;
+        }
+        .preview-table th:nth-child(1) { width: 45%; }
+        .preview-table th:nth-child(2) { width: 15%; text-align: right; }
+        .preview-table th:nth-child(3) { width: 20%; text-align: right; }
+        .preview-table th:nth-child(4) { width: 20%; text-align: right; }
+        .preview-table td:nth-child(2), .preview-table td:nth-child(3), .preview-table td:nth-child(4) {
+            text-align: right;
+        }
+        .editable-cell {
+            cursor: pointer;
+            transition: background 0.1s ease;
+            border-radius: 8px;
+        }
+        .editable-cell:hover {
+            background: #eef2ff;
+        }
+        .conditions-totals-row {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            gap: 24px;
+            margin: 20px 0 20px 0;
+            min-width: 0;
+        }
+        .general-conditions-box {
+            flex: 1.4;
+            background: #f9fafb;
+            border-left: 4px solid #2c7a6e;
+            padding: 14px 18px;
+            border-radius: 16px;
+            font-size: 0.85rem;
+            line-height: 1.45;
+            color: #1e2a3e;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            min-width: 0;
+            word-break: break-word;
+            overflow-wrap: anywhere;
+        }
+        .general-conditions-box strong {
+            color: #1f5e54;
+            display: block;
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+        }
+        .totals-preview {
+            width: 280px;
+            text-align: right;
+            background: #ffffff;
+            padding: 8px 0;
+            min-width: 0;
+        }
+        .totals-preview > div {
+            margin-bottom: 6px;
+        }
+        .grand-total {
+            font-size: 1.2rem;
+            font-weight: 800;
+            color: #1e5f55;
+            border-top: 2px dashed #cbdde6;
+            padding-top: 8px;
+            margin-top: 8px;
+        }
+        .farewell-signature-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 24px;
+            margin: 28px 0 16px 0;
+        }
+        .farewell-box {
+            flex: 2;
+            padding: 14px 20px;
+            font-size: 0.9rem;
+            line-height: 1.45;
+            color: #1e2a3e;
+        }
+        .signature-area {
+            flex-shrink: 0;
+            text-align: right;
+        }
+        .signature-box {
+            text-align: center;
+            max-width: 270px;
+            min-width: 230px;
+            background: #ffffff;
+            padding: 14px 18px;
+        }
+        .signature-box img {
+            max-height: 70px;
+            max-width: 200px;
+            object-fit: contain;
+            margin-bottom: 8px;
+        }
+        .signature-name {
+            font-weight: 800;
+            font-size: 0.9rem;
+            color: #1e2a3e;
+            margin-top: 6px;
+        }
+        .signature-title {
+            font-size: 0.8rem;
+            color: #2c7a6e;
+            font-weight: 500;
+        }
+        .signature-phone {
+            font-size: 0.75rem;
+            color: #4a6a7a;
+            margin-top: 4px;
+        }
+        .export-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-top: 24px;
+            justify-content: center;
+            border-top: 1px solid #e9edf2;
+            padding-top: 24px;
+        }
+        .export-actions button {
+            flex: 1;
+            min-width: 160px;
+            justify-content: center;
+            font-size: 0.9rem;
+            padding: 12px 16px;
+        }
+        .editing-input {
+            width: 100%;
+            padding: 6px 8px;
+            font-size: 0.85rem;
+            border: 2px solid #2c7a6e;
+            border-radius: 12px;
+            background: white;
+            font-family: inherit;
+            text-align: inherit;
+        }
+        /* Responsive: en móvil el número central puede ajustarse */
+        @media (max-width: 780px) {
+            .builder-wrapper { flex-direction: column; }
+            .config-panel { border-right: none; border-bottom: 1px solid #e2e8f0; }
+            .form-grid { grid-template-columns: 1fr; }
+            .full-width { grid-column: span 1; }
+            .quote-header { flex-direction: column; align-items: stretch; }
+            .quote-number-mid { text-align: center; align-self: center; white-space: normal; }
+            .company-info-card { max-width: 100%; }
+            .client-dates-row { flex-direction: column; }
+            .dates-box { text-align: left; white-space: normal; }
+            .totals-preview { width: 100%; text-align: right; }
+            .conditions-totals-row { flex-direction: column; }
+            .farewell-signature-row { flex-direction: column; align-items: stretch; }
+            .signature-area { align-self: center; text-align: center; }
+        }
+        
+        /* IMPRESIÓN: sin recuadro, cabecera alineada, fechas estrictamente a la derecha */
+        @media print {
+            @page { size: letter; margin: 0.4in; }
+            body { background: white; padding: 0; margin: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .config-panel, .header-tool, .export-actions, .btn-pdf, .btn-docx, .btn-print { display: none; }
+            .preview-panel { padding: 0 !important; margin: 0 !important; }
+            .quote-card {
+                border: none !important;
+                border-radius: 0 !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                background: white;
+                box-shadow: none;
+            }
+            .quote-header {
+                display: flex !important;
+                flex-direction: row !important;
+                justify-content: space-between !important;
+                align-items: center !important;
+                flex-wrap: nowrap !important;
+                gap: 15px !important;
+            }
+            .quote-number-mid {
+                font-size: 1.2rem;
+                padding: 4px 12px;
+                white-space: nowrap;
+            }
+            .company-info-card {
+                max-width: 280px !important;
+                width: auto !important;
+                margin-left: auto !important;
+                background: #f9fafb;
+                border: 1px solid #ccc;
+            }
+            /* Forzar fila cliente-fechas y alinear fechas a la derecha */
+            .client-dates-row {
+                display: flex !important;
+                flex-direction: row !important;
+                justify-content: space-between !important;
+                align-items: flex-start !important;
+                flex-wrap: nowrap !important;
+                width: 100% !important;
+            }
+            .client-data-box {
+                flex: 1 !important;
+            }
+            .dates-box {
+                text-align: right !important;
+                white-space: nowrap !important;
+                margin-left: auto !important;
+            }
+            .totals-preview { width: 280px !important; text-align: right; }
+            .conditions-totals-row { display: flex !important; flex-direction: row !important; justify-content: space-between; }
+            .farewell-signature-row { display: flex !important; flex-direction: row !important; break-inside: avoid; }
+            .preview-table { break-inside: avoid; }
+        }
+
+        .pdf-export-page {
+            width: 794px;
+            min-height: 1123px;
+            box-sizing: border-box;
+            background: #ffffff;
+            padding: 0.45in;
+            margin: 0;
+            position: relative;
+            font-family: 'Segoe UI', Arial, sans-serif;
+            color: #1e2a3e;
+            overflow: visible;
+        }
+    </style>
+</head>
+<body>
+<div class="dashboard">
+    <div class="header-tool">
+        <h1><i class="fas fa-file-invoice-dollar"></i> Generador de Cotizaciones 
+            <span class="badge-editable"><i class="fas fa-pen"></i> Edición directa (doble clic)</span>
+        </h1>
+        <p>N° Cotización entre logo y empresa. Fechas alineadas a la derecha al imprimir.</p>
+    </div>
+    <div class="builder-wrapper">
+        <!-- Panel izquierdo de configuración -->
+        <div class="config-panel">
+            <div class="section-card">
+                <div class="section-title"><i class="fas fa-building"></i> Mi Empresa</div>
+                <div class="form-grid">
+                    <div class="full-width"><label>Logo (adjuntar imagen):</label><input type="file" id="logoUpload" accept="image/jpeg, image/png, image/webp, image/svg+xml"><small style="color:#4b6a78;">Sube tu logo</small></div>
+                    <div><label>Nombre / Razón Social</label><input type="text" id="companyName" value="INGENIERÍA Y ENERGÍA KESOLAR SPA"></div>
+                    <div><label>RUT</label><input type="text" id="companyNif" value="77.753.882-9"></div>
+                    <div class="full-width"><label>Dirección</label><input type="text" id="companyAddress" value="PJE LUIS PENAILILLO 1053, COQUIMBO"></div>
+                    <div><label>Teléfono</label><input type="text" id="companyPhone" value="+56 9 4525 9288"></div>
+                    <div><label>Email</label><input type="email" id="companyEmail" value="contacto.kesolar@gmail.com"></div>
+                </div>
+            </div>
+            <div class="section-card">
+                <div class="section-title"><i class="fas fa-user-friends"></i> Datos del Cliente</div>
+                <div class="form-grid">
+                    <div class="full-width"><label>Cliente / Empresa</label><input type="text" id="clientName" value="InnovaTech Solutions"></div>
+                    <div><label>RUT / DNI</label><input type="text" id="clientNif" value="77.123.456-8"></div>
+                    <div class="full-width"><label>Dirección</label><input type="text" id="clientAddress" value="Av. Providencia 1200, Santiago"></div>
+                    <div><label>Email</label><input type="email" id="clientEmail" value="contacto@innovatech.cl"></div>
+                </div>
+            </div>
+            <div class="section-card">
+                <div class="section-title"><i class="fas fa-cog"></i> Detalles Cotización</div>
+                <div class="form-grid">
+                    <div><label>Nº COTIZACIÓN</label><input type="text" id="quoteNumber" value="COT-2026-001"></div>
+                    <div><label>Fecha emisión</label><input type="date" id="quoteDate"></div>
+                    <div><label>Validez (días)</label><input type="number" id="validityDays" value="30" min="1"></div>
+                    <div><label>% IVA (Impuesto)</label><input type="number" id="taxRate" value="19" step="1" min="0"></div>
+                    <div><label>% Descuento</label><input type="number" id="discountPercent" value="0" step="1" min="0"></div>
+                </div>
+                <div class="full-width" style="margin-top: 10px;">
+                    <label><i class="fas fa-file-contract"></i> Condiciones generales</label>
+                    <textarea id="generalConditions" rows="3">1.- Instalación en Región de Coquimbo
+2.- Garantía de equipos según fabricante
+3.- No considera modificación eléctricas existentes
+4.- Plazo de ejecución: 10 días hábiles
+5.- Forma de pago: 70% anticipo / 30% contra entrega</textarea>
+                </div>
+            </div>
+            <div class="section-card">
+                <div class="section-title"><i class="fas fa-signature"></i> Firma Digital</div>
+                <div class="full-width"><label>Imagen de firma (PNG/JPG):</label><input type="file" id="signatureUpload" accept="image/png, image/jpeg"></div>
+                <div class="form-grid" style="margin-top: 12px;">
+                    <div><label>Nombre del firmante</label><input type="text" id="signerName" value="Kevin Pacheco Jofré"></div>
+                    <div><label>Cargo del firmante</label><input type="text" id="signerTitle" value="Ingeniero en Energía"></div>
+                    <div class="full-width"><label>Teléfono del firmante</label><input type="tel" id="signerPhone" value="+56 9 9633 2286"></div>
+                </div>
+                <div style="margin-top: 12px; background: #fef5e8; padding: 10px; border-radius: 16px; font-size:0.8rem;"><i class="fas fa-info-circle"></i> <span id="signerSummaryText">Firma: Kevin Pacheco Jofré | Ingeniero en Energía | +56 9 9633 2286</span></div>
+            </div>
+            <div class="section-card">
+                <div class="section-title"><i class="fas fa-calculator"></i> Utilidad / margen empresarial</div>
+                <div class="form-grid">
+                    <div><label>Costo real total ($)</label><input type="number" id="utilityRealCost" value="80" min="0" step="1"></div>
+                    <div><label>Monto meta final ($)</label><input type="number" id="utilityTargetPrice" value="100" min="0" step="1"></div>
+                    <div><label>Margen objetivo (%)</label><input type="number" id="companyUtilityPercent" value="25" min="0" max="100" step="1"></div>
+                    <div><label>Base de referencia ($)</label><input type="number" id="utilityCostBase" value="0" min="0" step="1"></div>
+                </div>
+                <div style="margin-top: 12px; background: #eef7ff; padding: 12px; border-radius: 16px; font-size:0.8rem; line-height: 1.6;">
+                    <div><strong>Utilidad directa:</strong> $ <span id="utilityAmountPreview">20</span></div>
+                    <div><strong>% utilidad:</strong> <span id="utilityPercentPreview">25</span>%</div>
+                    <div><strong>Monto meta final:</strong> $ <span id="utilitySuggestedPricePreview">100</span></div>
+                    <div id="utilityBreakdownPreview" style="margin-top:8px; color:#3a5166; white-space: pre-line;"></div>
+                </div>
+                <p style="margin-top: 8px; font-size: 0.72rem; color: #4b6a78;"><i class="fas fa-info-circle"></i> Este cálculo no se refleja en la cotización final.</p>
+            </div>
+            <div class="section-card">
+                <div class="section-title"><i class="fas fa-list-ul"></i> Productos / Servicios (administración auxiliar)</div>
+                <div id="itemsListContainer"></div>
+                <button id="addItemBtn" class="btn-icon add-item-btn" style="width:100%; margin-top: 12px;"><i class="fas fa-plus-circle"></i> Añadir línea</button>
+                <p style="font-size:0.7rem; margin-top: 10px; color:#4b6a78;"><i class="fas fa-mouse-pointer"></i> También puedes editar directamente en la tabla de la derecha (doble clic)</p>
+            </div>
+        </div>
+
+        <!-- Panel de vista previa (sin recuadro) -->
+        <div class="preview-panel">
+            <div class="quote-preview-container">
+                <div id="quoteForPdf" class="quote-card">
+                    <!-- Cabecera: Logo - N° Cotización - Datos empresa -->
+                    <div class="quote-header">
+                        <div class="logo-area" id="previewLogoArea">
+                            <div class="logo-placeholder"><i class="fas fa-image"></i> Logo no cargado</div>
+                        </div>
+                        <div class="quote-number-mid" id="quoteNumberMid">COT-000</div>
+                        <div class="company-info-card" id="companyInfoCardPreview">
+                            <div class="company-detail-line"><strong id="previewCompanyNameHeader">---</strong></div>
+                            <div class="company-detail-line" id="previewCompanyRutHeader">RUT: ---</div>
+                            <div class="company-detail-line" id="previewCompanyAddrHeader">---</div>
+                            <div class="company-detail-line" id="previewCompanyContactHeader">---</div>
+                        </div>
+                    </div>
+
+                    <!-- Cliente + fechas en misma línea (fechas a la derecha) -->
+                    <div class="client-dates-row">
+                        <div class="client-data-box">
+                            <strong><i class="fas fa-user"></i> Cliente:</strong> <span id="previewClientName">---</span><br>
+                            <span id="previewClientNif">RUT: ---</span><br>
+                            <span id="previewClientAddr">---</span><br>
+                            <span id="previewClientEmail">---</span>
+                        </div>
+                        <div class="dates-box">
+                            <strong>Fecha emisión:</strong> <span id="previewDate">--/--/----</span><br>
+                            <strong>Válido hasta:</strong> <span id="previewValidUntil">--/--/----</span>
+                        </div>
+                    </div>
+
+                    <div class="greeting-text">
+                        En atención a su solicitud de cotización, nos complace presentarles la siguiente propuesta:
+                    </div>
+                    <table class="preview-table" id="previewItemsTable">
+                        <thead><tr><th>Descripción / Servicio <i class="fas fa-edit" style="font-size:0.7rem;"></i></th><th>Cantidad</th><th>Precio unit. ($)</th><th>Importe ($)</th></tr></thead>
+                        <tbody id="previewItemsBody"><tr><td colspan="4" style="text-align:center;">Añade productos o servicios</td></tr></tbody>
+                    </table>
+                    <div class="conditions-totals-row">
+                        <div class="general-conditions-box" id="previewGeneralConditionsBox">
+                            <strong><i class="fas fa-gavel"></i> Condiciones generales</strong>
+                            <div id="previewGeneralConditionsText">---</div>
+                        </div>
+                        <div class="totals-preview">
+                            <div><strong>Subtotal:</strong> $ <span id="previewSubtotal">0</span></div>
+                            <div id="discountRow"><strong>Descuento (<span id="previewDiscountPercent">0</span>%):</strong> - $ <span id="previewDiscountAmount">0</span></div>
+                            <div><strong>IVA (<span id="previewTaxPercent">19</span>%):</strong> $ <span id="previewTaxAmount">0</span></div>
+                            <div class="grand-total"><strong>TOTAL:</strong> $ <span id="previewTotal">0</span></div>
+                        </div>
+                    </div>
+                    <div class="farewell-signature-row">
+                        <div class="farewell-box">
+                            Quedamos atentos a sus comentarios y, esperando que la oferta sea de su interés, le saludamos atentamente.
+                        </div>
+                        <div class="signature-area">
+                            <div class="signature-box">
+                                <div id="previewSignatureImage"><div style="font-size:0.7rem; color:#aaa;">(sin firma)</div></div>
+                                <div class="signature-name" id="previewSignerName">Kevin Pacheco Jofré</div>
+                                <div class="signature-title" id="previewSignerTitle">Ingeniero en Energía</div>
+                                <div class="signature-phone" id="previewSignerPhone"><i class="fas fa-phone-alt"></i> +56 9 96332286</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="export-actions">
+                <button id="exportPdfBtn" class="btn-primary"><i class="fas fa-file-pdf"></i> Guardar PDF</button>
+                <button id="exportDocxBtn" class="btn-secondary"><i class="fas fa-file-word"></i> Guardar DOCX</button>
+                <button id="printBtn" class="btn-outline"><i class="fas fa-print"></i> Imprimir</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let items = [
+        { description: "Sistema fotovoltaico OFF-GRID de 4,96 [kWp]: 8 módulos monocristalinos SINE ENERGY de 620 [W], inversor Victron Energy Multi RS de 6 [kVA] y batería de litio SUN PRO de 11,7 [kWh].", quantity: 1, unitPrice: 3821987 },
+        { description: "Sistema de Monitoreo – Victron Cerbo GX MK2", quantity: 1, unitPrice: 281918 },
+        { description: "Estructura de montaje: Estructura de aluminio coplanar a techo", quantity: 1, unitPrice: 132954 },
+        { description: "Accesorios de interconexión eléctrica y canalización: Incluye cableado DC/AC, protecciones y canalización", quantity: 1, unitPrice: 434964 },
+        { description: "Instalación y puesta en marcha: Montaje, conexionado y pruebas de operación", quantity: 1, unitPrice: 1202126 }
+    ];
+
+    let currentLogoDataUrl = null;
+    let currentSignatureDataUrl = null;
+
+    const companyName = document.getElementById('companyName');
+    const companyNif = document.getElementById('companyNif');
+    const companyAddress = document.getElementById('companyAddress');
+    const companyPhone = document.getElementById('companyPhone');
+    const companyEmail = document.getElementById('companyEmail');
+    const clientName = document.getElementById('clientName');
+    const clientNif = document.getElementById('clientNif');
+    const clientAddress = document.getElementById('clientAddress');
+    const clientEmail = document.getElementById('clientEmail');
+    const quoteNumber = document.getElementById('quoteNumber');
+    const quoteDate = document.getElementById('quoteDate');
+    const validityDays = document.getElementById('validityDays');
+    const taxRate = document.getElementById('taxRate');
+    const discountPercent = document.getElementById('discountPercent');
+    const generalConditions = document.getElementById('generalConditions');
+    const logoUpload = document.getElementById('logoUpload');
+    const signatureUpload = document.getElementById('signatureUpload');
+    const signerName = document.getElementById('signerName');
+    const signerTitle = document.getElementById('signerTitle');
+    const signerPhone = document.getElementById('signerPhone');
+    const companyUtilityPercent = document.getElementById('companyUtilityPercent');
+    const utilityCostBase = document.getElementById('utilityCostBase');
+    const utilityRealCost = document.getElementById('utilityRealCost');
+    const utilityTargetPrice = document.getElementById('utilityTargetPrice');
+    const quoteNumberMid = document.getElementById('quoteNumberMid');
+
+    const previewCompanyNameHeader = document.getElementById('previewCompanyNameHeader');
+    const previewCompanyRutHeader = document.getElementById('previewCompanyRutHeader');
+    const previewCompanyAddrHeader = document.getElementById('previewCompanyAddrHeader');
+    const previewCompanyContactHeader = document.getElementById('previewCompanyContactHeader');
+    const previewClientNameSpan = document.getElementById('previewClientName');
+    const previewClientNifSpan = document.getElementById('previewClientNif');
+    const previewClientAddrSpan = document.getElementById('previewClientAddr');
+    const previewClientEmailSpan = document.getElementById('previewClientEmail');
+    const previewDateSpan = document.getElementById('previewDate');
+    const previewValidUntilSpan = document.getElementById('previewValidUntil');
+    const previewDiscountPercentSpan = document.getElementById('previewDiscountPercent');
+    const previewTaxPercentSpan = document.getElementById('previewTaxPercent');
+    const previewSubtotalSpan = document.getElementById('previewSubtotal');
+    const previewDiscountAmountSpan = document.getElementById('previewDiscountAmount');
+    const previewTaxAmountSpan = document.getElementById('previewTaxAmount');
+    const previewTotalSpan = document.getElementById('previewTotal');
+    const previewGeneralConditionsText = document.getElementById('previewGeneralConditionsText');
+    const previewSignatureImage = document.getElementById('previewSignatureImage');
+    const previewItemsBody = document.getElementById('previewItemsBody');
+    const previewLogoArea = document.getElementById('previewLogoArea');
+    const previewSignerName = document.getElementById('previewSignerName');
+    const previewSignerTitle = document.getElementById('previewSignerTitle');
+    const previewSignerPhone = document.getElementById('previewSignerPhone');
+    const utilityAmountPreview = document.getElementById('utilityAmountPreview');
+    const utilityPercentPreview = document.getElementById('utilityPercentPreview');
+    const utilitySuggestedPricePreview = document.getElementById('utilitySuggestedPricePreview');
+    const utilityBreakdownPreview = document.getElementById('utilityBreakdownPreview');
+    const signerSummaryText = document.getElementById('signerSummaryText');
+    const itemsListContainer = document.getElementById('itemsListContainer');
+    const discountRowSpan = document.getElementById('discountRow');
+
+    function formatCLP(value) {
+        const num = Number(value) || 0;
+        return '$ ' + Math.round(num).toLocaleString('es-CL');
+    }
+
+    function formatNumberRaw(value) {
+        const num = Number(value) || 0;
+        return Math.round(num).toLocaleString('es-CL');
+    }
+
+    function parseDateInput(value) {
+        if (!value) return new Date();
+        const [year, month, day] = value.split('-').map(Number);
+        if ([year, month, day].some((part) => Number.isNaN(part))) return new Date();
+        return new Date(year, month - 1, day);
+    }
+
+    function formatDateDMY(dateObj) {
+        const day = String(dateObj.getDate()).padStart(2, '0');
+        const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+        const year = dateObj.getFullYear();
+        return `${day}-${month}-${year}`;
+    }
+
+    function formatDateInputLocal(date) {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    }
+
+    function escapeHtml(str) {
+        if (!str) return '';
+        return str.replace(/[&<>]/g, (m) => {
+            if (m === '&') return '&amp;';
+            if (m === '<') return '&lt;';
+            return '&gt;';
+        });
+    }
+
+    function renderItemsManager() {
+        if (!itemsListContainer) return;
+        itemsListContainer.innerHTML = '';
+
+        items.forEach((item, idx) => {
+            const rowDiv = document.createElement('div');
+            rowDiv.className = 'item-row';
+
+            const descInput = document.createElement('input');
+            descInput.type = 'text';
+            descInput.value = item.description;
+            descInput.placeholder = 'Descripción';
+            descInput.addEventListener('input', (e) => {
+                items[idx].description = e.target.value;
+                updatePreviewFromState();
+            });
+
+            const qtyInput = document.createElement('input');
+            qtyInput.type = 'number';
+            qtyInput.step = 'any';
+            qtyInput.value = item.quantity;
+            qtyInput.className = 'qty-input';
+            qtyInput.addEventListener('input', (e) => {
+                items[idx].quantity = Number(e.target.value) || 0;
+                updatePreviewFromState();
+            });
+
+            const priceInput = document.createElement('input');
+            priceInput.type = 'number';
+            priceInput.step = 'any';
+            priceInput.value = item.unitPrice;
+            priceInput.className = 'price-input';
+            priceInput.addEventListener('input', (e) => {
+                items[idx].unitPrice = Number(e.target.value) || 0;
+                updatePreviewFromState();
+            });
+
+            const amountSpan = document.createElement('span');
+            amountSpan.className = 'amount-display';
+            amountSpan.textContent = formatCLP(item.quantity * item.unitPrice);
+
+            const removeBtn = document.createElement('button');
+            removeBtn.className = 'remove-item';
+            removeBtn.innerHTML = '<i class="fas fa-trash-alt"></i> Eliminar';
+            removeBtn.addEventListener('click', () => {
+                items.splice(idx, 1);
+                renderItemsManager();
+                updatePreviewFromState();
+            });
+
+            rowDiv.append(descInput, qtyInput, priceInput, amountSpan, removeBtn);
+            itemsListContainer.appendChild(rowDiv);
+        });
+    }
+
+    function updatePreviewFromState() {
+        quoteNumberMid.textContent = quoteNumber.value || 'COT-000';
+        previewCompanyNameHeader.textContent = companyName.value || '---';
+        previewCompanyRutHeader.textContent = `RUT: ${companyNif.value || '---'}`;
+        previewCompanyAddrHeader.textContent = companyAddress.value || '---';
+        const contactText = `${companyPhone.value || ''}${companyPhone.value && companyEmail.value ? '  ' : ''}${companyEmail.value || ''}`;
+        previewCompanyContactHeader.textContent = contactText || 'Sin contacto';
+
+        previewClientNameSpan.textContent = clientName.value || 'Cliente';
+        previewClientNifSpan.textContent = `RUT: ${clientNif.value || ''}`;
+        previewClientAddrSpan.textContent = clientAddress.value || '';
+        previewClientEmailSpan.textContent = clientEmail.value || '';
+
+        let today = new Date();
+        if (quoteDate.value) today = parseDateInput(quoteDate.value);
+        previewDateSpan.textContent = formatDateDMY(today);
+
+        let validity = parseInt(validityDays.value, 10);
+        if (Number.isNaN(validity)) validity = 30;
+        const validUntil = new Date(today);
+        validUntil.setDate(today.getDate() + validity);
+        previewValidUntilSpan.textContent = formatDateDMY(validUntil);
+
+        previewItemsBody.innerHTML = '';
+        let subtotal = 0;
+
+        items.forEach((item, idx) => {
+            const amountRounded = Math.round((Number(item.quantity) || 0) * (Number(item.unitPrice) || 0));
+            subtotal += amountRounded;
+
+            const row = document.createElement('tr');
+            row.setAttribute('data-item-index', String(idx));
+
+            const descCell = document.createElement('td');
+            descCell.textContent = item.description || '—';
+            descCell.className = 'editable-cell';
+            descCell.setAttribute('data-field', 'desc');
+
+            const qtyCell = document.createElement('td');
+            qtyCell.textContent = Number(item.quantity) || 0;
+            qtyCell.className = 'editable-cell';
+            qtyCell.setAttribute('data-field', 'qty');
+
+            const priceCell = document.createElement('td');
+            priceCell.textContent = formatCLP(item.unitPrice);
+            priceCell.className = 'editable-cell';
+            priceCell.setAttribute('data-field', 'price');
+
+            const amountCell = document.createElement('td');
+            amountCell.textContent = formatCLP(amountRounded);
+            amountCell.style.fontWeight = '500';
+
+            row.append(descCell, qtyCell, priceCell, amountCell);
+            previewItemsBody.appendChild(row);
+        });
+
+        if (items.length === 0) {
+            previewItemsBody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Sin productos agregados</td></tr>';
+        }
+
+        const discountPercentValue = Number(discountPercent.value) || 0;
+        const taxRateValue = Number(taxRate.value) || 0;
+        const discountAmount = Math.round(subtotal * (discountPercentValue / 100));
+        const subtotalAfterDiscount = subtotal - discountAmount;
+        const taxAmount = Math.round(subtotalAfterDiscount * (taxRateValue / 100));
+        const total = subtotalAfterDiscount + taxAmount;
+
+        previewDiscountPercentSpan.textContent = String(Math.round(discountPercentValue));
+        previewTaxPercentSpan.textContent = String(Math.round(taxRateValue));
+        previewSubtotalSpan.textContent = formatNumberRaw(subtotal);
+        previewDiscountAmountSpan.textContent = formatNumberRaw(discountAmount);
+        previewTaxAmountSpan.textContent = formatNumberRaw(taxAmount);
+        previewTotalSpan.textContent = formatNumberRaw(total);
+
+        const condText = generalConditions.value || 'Sin condiciones adicionales.';
+        previewGeneralConditionsText.innerHTML = escapeHtml(condText).replace(/\n/g, '<br>');
+
+        const utilityPercent = Number(companyUtilityPercent.value) || 0;
+        const costBase = Number(utilityCostBase.value) || 0;
+        const realCost = Number(utilityRealCost.value) || 0;
+        const targetPrice = Number(utilityTargetPrice.value) || 0;
+        const directUtility = Math.max(targetPrice - realCost, 0);
+        const directPercent = realCost > 0 ? (directUtility / realCost) * 100 : 0;
+
+        utilityAmountPreview.textContent = formatNumberRaw(directUtility);
+        utilityPercentPreview.textContent = formatNumberRaw(directPercent);
+        utilitySuggestedPricePreview.textContent = formatNumberRaw(targetPrice);
+
+        const itemBreakdown = [];
+        let utilityTotal = 0;
+        let suggestedTotal = 0;
+
+        if (items.length > 0) {
+            items.forEach((item, index) => {
+                const itemBase = (Number(item.quantity) || 0) * (Number(item.unitPrice) || 0);
+                const itemUtility = itemBase * (utilityPercent / 100);
+                const itemSuggestedPrice = itemBase + itemUtility;
+                utilityTotal += itemUtility;
+                suggestedTotal += itemSuggestedPrice;
+                const itemName = (item.description || `Línea ${index + 1}`).slice(0, 70);
+                itemBreakdown.push(`Línea ${index + 1}: ${itemName}${itemName.length >= 70 ? '…' : ''} → $ ${formatNumberRaw(itemBase)} × ${utilityPercent}% = $ ${formatNumberRaw(itemUtility)} / total $ ${formatNumberRaw(itemSuggestedPrice)}`);
+            });
+        }
+
+        if (realCost > 0 || targetPrice > 0) {
+            utilityBreakdownPreview.innerHTML = [
+                `Costo real: $ ${formatNumberRaw(realCost)}`,
+                `Meta final: $ ${formatNumberRaw(targetPrice)}`,
+                `Utilidad directa: $ ${formatNumberRaw(directUtility)}`,
+                `Porcentaje: ${formatNumberRaw(directPercent)}%`,
+                ...(itemBreakdown.length ? ['---', ...itemBreakdown] : [])
+            ].join('<br>');
+        } else if (itemBreakdown.length) {
+            utilityBreakdownPreview.innerHTML = itemBreakdown.join('<br>');
+        } else {
+            utilityBreakdownPreview.innerHTML = 'Sin líneas para calcular.';
+        }
+
+        if (costBase > 0 && items.length > 0) {
+            utilityBreakdownPreview.innerHTML += `<br><br>Referencia base: $ ${formatNumberRaw(costBase)} (solo referencia interna)`;
+        }
+
+        previewSignerName.textContent = signerName.value || 'Firmante';
+        previewSignerTitle.textContent = signerTitle.value || 'Cargo';
+        previewSignerPhone.innerHTML = `<i class="fas fa-phone-alt"></i> ${signerPhone.value || '+56 9 0000 0000'}`;
+        signerSummaryText.textContent = `Firma: ${signerName.value || 'Firmante'} | ${signerTitle.value || 'Cargo'} | ${signerPhone.value || '+56 9 0000 0000'}`;
+
+        if(currentSignatureDataUrl) previewSignatureImage.innerHTML = `<img src="${currentSignatureDataUrl}" alt="Firma" style="max-height:60px; max-width:180px;">`;
+        else previewSignatureImage.innerHTML = '<div style="font-size:0.7rem; color:#aaa;">(sin firma)</div>';
+
+        if (discountPercentValue <= 0 || discountAmount === 0) {
+            discountRowSpan.style.display = 'none';
+        } else {
+            discountRowSpan.style.display = 'block';
+        }
+
+        attachInlineEditing();
+    }
+
+    function attachInlineEditing() {
+        if (!previewItemsBody) return;
+        previewItemsBody.removeEventListener('dblclick', handleTableDoubleClick);
+        previewItemsBody.addEventListener('dblclick', handleTableDoubleClick);
+    }
+
+    function handleTableDoubleClick(e) {
+        const targetCell = e.target.closest('td');
+        if (!targetCell) return;
+
+        const row = targetCell.closest('tr');
+        if (!row || !row.hasAttribute('data-item-index')) return;
+
+        const idx = Number(row.getAttribute('data-item-index'));
+        if (Number.isNaN(idx) || idx >= items.length) return;
+
+        const colType = targetCell.getAttribute('data-field');
+        if (!colType) return;
+
+        let currentValue = '';
+        if (colType === 'desc') currentValue = items[idx].description;
+        else if (colType === 'qty') currentValue = items[idx].quantity;
+        else if (colType === 'price') currentValue = items[idx].unitPrice;
+
+        const input = document.createElement('input');
+        input.className = 'editing-input';
+        input.value = currentValue;
+
+        if (colType === 'qty' || colType === 'price') {
+            input.type = 'number';
+            input.step = 'any';
+            if (colType === 'price') input.step = '1000';
+        } else {
+            input.type = 'text';
+        }
+
+        targetCell.innerHTML = '';
+        targetCell.appendChild(input);
+        input.focus();
+        input.select();
+
+        const saveEdit = () => {
+            const newVal = input.value.trim();
+
+            if (colType === 'desc') {
+                items[idx].description = newVal || 'Sin descripción';
+            } else if (colType === 'qty') {
+                const qty = Number(newVal);
+                items[idx].quantity = Number.isNaN(qty) || qty < 0 ? 0 : qty;
+            } else if (colType === 'price') {
+                const price = Number(newVal);
+                items[idx].unitPrice = Number.isNaN(price) || price < 0 ? 0 : price;
+            }
+
+            renderItemsManager();
+            updatePreviewFromState();
+        };
+
+        input.addEventListener('blur', saveEdit, { once: true });
+        input.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                input.blur();
+            }
+        });
+    }
+
+    function updateLogoPreview(dataUrl) {
+        if (dataUrl) {
+            previewLogoArea.innerHTML = `<img src="${dataUrl}" alt="Logo" style="max-height:70px; max-width:180px; border-radius:12px;">`;
+        } else {
+            previewLogoArea.innerHTML = '<div class="logo-placeholder"><i class="fas fa-image"></i> Logo no cargado</div>';
+        }
+    }
+
+    logoUpload.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file && file.type.startsWith('image/')) {
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                currentLogoDataUrl = ev.target.result;
+                updateLogoPreview(currentLogoDataUrl);
+                updatePreviewFromState();
+            };
+            reader.readAsDataURL(file);
+        } else {
+            currentLogoDataUrl = null;
+            updateLogoPreview(null);
+            updatePreviewFromState();
+        }
+    });
+
+    signatureUpload.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file && (file.type === 'image/png' || file.type === 'image/jpeg')) {
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                currentSignatureDataUrl = ev.target.result;
+                updatePreviewFromState();
+            };
+            reader.readAsDataURL(file);
+        } else {
+            currentSignatureDataUrl = null;
+            updatePreviewFromState();
+        }
+    });
+
+    document.getElementById('addItemBtn').addEventListener('click', () => {
+        items.push({ description: 'Nuevo servicio', quantity: 1, unitPrice: 0 });
+        renderItemsManager();
+        updatePreviewFromState();
+    });
+
+    const formInputs = [
+        companyName, companyNif, companyAddress, companyPhone, companyEmail,
+        clientName, clientNif, clientAddress, clientEmail,
+        quoteNumber, validityDays, taxRate, discountPercent,
+        generalConditions, quoteDate, signerName, signerTitle, signerPhone,
+        companyUtilityPercent, utilityCostBase, utilityRealCost, utilityTargetPrice
+    ];
+    formInputs.forEach((inp) => inp && inp.addEventListener('input', updatePreviewFromState));
+
+    if (quoteDate && !quoteDate.value) {
+        quoteDate.value = formatDateInputLocal(new Date());
+    }
+
+    document.getElementById('exportPdfBtn').addEventListener('click', async () => {
+        updatePreviewFromState();
+
+        if (typeof window.html2pdf === 'undefined') {
+            alert('La librería de PDF no está cargada. Revisa la conexión o vuelve a abrir la página.');
+            return;
+        }
+
+        const source = document.getElementById('quoteForPdf');
+        if (!source) {
+            alert('No se encontró el contenido a exportar.');
+            return;
+        }
+
+        const pageWidth = 794;
+        const pageHeight = 1123;
+        const rawHeight = Math.max(source.scrollHeight, source.offsetHeight, 600);
+        const fitScale = Math.min(1, Math.max(0.65, (pageHeight - 40) / rawHeight));
+
+        const exportPage = document.createElement('div');
+        exportPage.className = 'pdf-export-page';
+        exportPage.innerHTML = source.innerHTML;
+        exportPage.style.width = `${pageWidth}px`;
+        exportPage.style.maxWidth = `${pageWidth}px`;
+        exportPage.style.minHeight = `${pageHeight}px`;
+        exportPage.style.boxSizing = 'border-box';
+        exportPage.style.background = '#ffffff';
+        exportPage.style.padding = '0';
+        exportPage.style.margin = '0';
+        exportPage.style.position = 'relative';
+        exportPage.style.fontFamily = 'Segoe UI, Arial, sans-serif';
+        exportPage.style.color = '#1e2a3e';
+        exportPage.style.overflow = 'hidden';
+        exportPage.style.transform = `scale(${fitScale})`;
+        exportPage.style.transformOrigin = 'top left';
+        exportPage.style.height = `${Math.ceil(rawHeight * fitScale)}px`;
+        exportPage.style.width = `${Math.ceil(pageWidth * fitScale)}px`;
+        document.body.appendChild(exportPage);
+
+        const exportStyles = `
+            * { box-sizing: border-box; }
+            body { margin: 0; }
+            .quote-card { width: 100%; max-width: 100%; background: #fff; }
+            .quote-header, .client-dates-row, .conditions-totals-row, .farewell-signature-row { display: flex !important; }
+            .quote-header { justify-content: space-between; align-items: center; }
+            .client-dates-row { justify-content: space-between; align-items: flex-start; }
+            .conditions-totals-row { justify-content: space-between; }
+            .preview-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+            .preview-table th, .preview-table td { word-break: break-word; }
+            .totals-preview { width: 280px; }
+            .general-conditions-box { flex: 1; }
+            .signature-box { max-width: 270px; }
+            .logo-area img, .signature-box img { max-width: 100%; }
+        `;
+
+        const styleTag = document.createElement('style');
+        styleTag.textContent = exportStyles;
+        exportPage.appendChild(styleTag);
+
+        try {
+            await Promise.all(Array.from(exportPage.querySelectorAll('img')).map((img) => {
+                if (img.complete) return Promise.resolve();
+                return new Promise((resolve) => {
+                    img.onload = resolve;
+                    img.onerror = resolve;
+                });
+            }));
+
+            await html2pdf()
+                .set({
+                    margin: [0, 0, 0, 0],
+                    filename: `Cotizacion_${(quoteNumber.value || 'doc').replace(/[^a-z0-9]/gi, '_')}.pdf`,
+                    image: { type: 'jpeg', quality: 0.98 },
+                    html2canvas: {
+                        scale: 2,
+                        useCORS: true,
+                        backgroundColor: '#ffffff',
+                        scrollX: 0,
+                        scrollY: 0,
+                        letterRendering: true,
+                        logging: false
+                    },
+                    jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' },
+                    pagebreak: { mode: ['avoid', 'css', 'legacy'] }
+                })
+                .from(exportPage)
+                .save();
+        } catch (error) {
+            console.error('Error PDF:', error);
+            alert('No se pudo generar el PDF. Intenta nuevamente.');
+        } finally {
+            exportPage.remove();
+        }
+    });
+
+    document.getElementById('exportDocxBtn').addEventListener('click', () => {
+        updatePreviewFromState();
+        const clone = document.getElementById('quoteForPdf').cloneNode(true);
+        const styles = document.querySelector('style').innerHTML;
+        const docTitle = `Cotizacion_${(quoteNumber.value || 'doc').replace(/[^a-z0-9]/gi, '_')}`;
+        const safeCloneHtml = String(clone.outerHTML).replace(/<\/script/gi, '<\\/script').replace(/<script/gi, '<\\/script');
+
+        const htmlString = [
+            '<!DOCTYPE html>',
+            '<html><head>',
+            '<meta charset="UTF-8">',
+            '<title>Cotización</title>',
+            '<style>',
+            'body{font-family:"Segoe UI",Arial,sans-serif;margin:0.6in;}',
+            styles,
+            '.export-actions,.config-panel,.header-tool{display:none;}',
+            '.quote-card{border:none;padding:0;}',
+            '</style>',
+            '</head><body>',
+            safeCloneHtml,
+            '</body></html>'
+        ].join('');
+
+        try {
+            const blob = new Blob([htmlString], { type: 'application/msword' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = docTitle + '.doc';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(link.href);
+        } catch (error) {
+            alert('No se pudo generar el archivo DOCX.');
+        }
+    });
+
+    document.getElementById('printBtn').addEventListener('click', () => {
+        updatePreviewFromState();
+        window.print();
+    });
+
+    function fullRefresh() {
+        renderItemsManager();
+        updatePreviewFromState();
+        updateLogoPreview(currentLogoDataUrl);
+    }
+
+    fullRefresh();
+</script>
+</body>
+</html>
